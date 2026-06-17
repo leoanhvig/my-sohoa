@@ -1,4 +1,8 @@
+import dotenv from 'dotenv'
 import { google } from 'googleapis'
+
+dotenv.config({ path: 'server/.env' })
+dotenv.config({ path: '.env.local' })
 
 export interface DriveFileItem {
   id: string
@@ -9,6 +13,7 @@ export interface DriveFileItem {
   webContentLink: string
   createdTime: string
   modifiedTime: string
+  relativePath: string
 }
 
 export interface DriveFolderInfo {
@@ -64,6 +69,10 @@ function isSupportedDriveFile(mimeType = '', name = ''): boolean {
   )
 }
 
+function isDriveFolder(mimeType = ''): boolean {
+  return mimeType === 'application/vnd.google-apps.folder'
+}
+
 export async function getDriveFolderInfo(
   folderId: string
 ): Promise<DriveFolderInfo> {
@@ -82,7 +91,8 @@ export async function getDriveFolderInfo(
 }
 
 export async function listSupportedDriveFiles(
-  folderId: string
+  folderId: string,
+  parentPath = ''
 ): Promise<DriveFileItem[]> {
   const drive = getDriveClient()
   const files: DriveFileItem[] = []
@@ -103,8 +113,19 @@ export async function listSupportedDriveFiles(
       const id = file.id || ''
       const name = file.name || ''
       const mimeType = file.mimeType || ''
+      const relativePath = parentPath ? `${parentPath}/${name}` : name
 
-      if (!id || !isSupportedDriveFile(mimeType, name)) {
+      if (!id) {
+        continue
+      }
+
+      if (isDriveFolder(mimeType)) {
+        const childFiles = await listSupportedDriveFiles(id, relativePath)
+        files.push(...childFiles)
+        continue
+      }
+
+      if (!isSupportedDriveFile(mimeType, name)) {
         continue
       }
 
@@ -117,6 +138,7 @@ export async function listSupportedDriveFiles(
         webContentLink: file.webContentLink || '',
         createdTime: file.createdTime || '',
         modifiedTime: file.modifiedTime || '',
+        relativePath,
       })
     }
 

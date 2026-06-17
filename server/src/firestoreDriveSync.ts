@@ -126,7 +126,7 @@ async function createDocumentFromDriveFile({
   file: DriveFileItem
 }) {
   const documentRef = adminDb.collection('Documents').doc()
-  const relativePath = `${folderName}/${file.name}`
+  const relativePath = `${folderName}/${file.relativePath || file.name}`
 
   await documentRef.set({
     uid: documentRef.id,

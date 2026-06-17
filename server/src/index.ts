@@ -1,13 +1,13 @@
 import cors from 'cors'
 import dotenv from 'dotenv'
 import express from 'express'
-import { requireFirebaseAuth, AuthenticatedRequest } from './authMiddleware'
+import { AuthenticatedRequest, requireFirebaseAuth } from './authMiddleware'
+import { syncDriveFolderToFirestore } from './firestoreDriveSync'
 import {
   extractDriveFolderId,
   getDriveFolderInfo,
   listSupportedDriveFiles,
 } from './googleDrive'
-import { syncDriveFolderToFirestore } from './firestoreDriveSync'
 
 dotenv.config({ path: '.env.local' })
 dotenv.config({ path: 'server/.env' })
@@ -35,7 +35,9 @@ app.post(
       const folderId = extractDriveFolderId(folderInput)
 
       if (!folderId) {
-        return res.status(400).json({ message: 'Google Drive folder ID is required.' })
+        return res
+          .status(400)
+          .json({ message: 'Google Drive folder ID is required.' })
       }
 
       if (!req.user?.uid) {
@@ -44,6 +46,9 @@ app.post(
 
       const folderInfo = await getDriveFolderInfo(folderId)
       const files = await listSupportedDriveFiles(folderId)
+      console.log(
+        `Drive folder ${folderInfo.name} (${folderId}) has ${files.length} supported files.`
+      )
       const result = await syncDriveFolderToFirestore({
         folderId,
         folderName: String(req.body.folderName || folderInfo.name || folderId),
@@ -54,7 +59,10 @@ app.post(
 
       return res.json(result)
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to sync Google Drive folder.'
+      const message =
+        error instanceof Error
+          ? error.message
+          : 'Failed to sync Google Drive folder.'
       return res.status(500).json({ message })
     }
   }
