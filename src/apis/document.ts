@@ -48,6 +48,7 @@ export interface DocumentRecord {
   drive_web_view_link: string
   drive_download_link: string
   storage_provider: 'firebase_storage' | 'google_drive'
+  is_completed?: boolean
   created_at: ReturnType<typeof serverTimestamp>
   updated_at: ReturnType<typeof serverTimestamp>
 }
@@ -114,4 +115,23 @@ export async function getDocumentsByUidFile(
   const snapshot = await getDocs(documentsQuery)
 
   return snapshot.docs.map((document) => document.data() as DocumentRecord)
+}
+
+function isDocumentCompleted(document: DocumentRecord): boolean {
+  return Boolean(
+    document.is_completed ||
+      document.so_ky_hieu ||
+      document.ngay_thang ||
+      document.tac_gia ||
+      document.trich_yeu ||
+      document.so_to
+  )
+}
+
+export async function getCompletedDocumentCountByUidFile(
+  uidFile: string
+): Promise<number> {
+  const documents = await getDocumentsByUidFile(uidFile)
+
+  return documents.filter(isDocumentCompleted).length
 }

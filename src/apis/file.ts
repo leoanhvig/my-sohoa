@@ -1,11 +1,13 @@
 import {
   collection,
   doc,
+  documentId,
   getDocs,
   limit,
   query,
   serverTimestamp,
   setDoc,
+  updateDoc,
   where,
 } from 'firebase/firestore'
 import { db } from '../firebase'
@@ -13,6 +15,7 @@ import { db } from '../firebase'
 export interface CreateFileRecordParams {
   file_name: string
   number_of_file: number
+  number_of_file_done?: number
   creator_uid: string
   updated_uid: string
   drive_folder_id?: string
@@ -26,11 +29,16 @@ export interface FileRecord extends CreateFileRecordParams {
   updated_at: ReturnType<typeof serverTimestamp>
 }
 
+export interface DashboardFileRecord extends FileRecord {
+  completed_file_count: number
+}
+
 const FILE_COLLECTION = 'File'
 
 export async function createFileRecord({
   file_name,
   number_of_file,
+  number_of_file_done = 0,
   creator_uid,
   updated_uid,
   drive_folder_id = '',
@@ -43,6 +51,7 @@ export async function createFileRecord({
     uid: fileRef.id,
     file_name,
     number_of_file,
+    number_of_file_done,
     creator_uid,
     updated_uid,
     drive_folder_id,
@@ -73,4 +82,116 @@ export async function getFileRecordByName(
   }
 
   return snapshot.docs[0].data() as FileRecord
+}
+
+export async function getAllFileRecords(): Promise<FileRecord[]> {
+  const snapshot = await getDocs(collection(db, FILE_COLLECTION))
+
+  return snapshot.docs.map((file) => file.data() as FileRecord)
+}
+
+export async function getAssignableFilesByUser(
+  userUid: string
+): Promise<FileRecord[]> {
+  const filesCollection = collection(db, FILE_COLLECTION)
+  const [unassignedSnapshot, assignedSnapshot] = await Promise.all([
+    getDocs(query(filesCollection, where('updated_uid', '==', ''))),
+    getDocs(query(filesCollection, where('updated_uid', '==', userUid))),
+  ])
+
+  return [...unassignedSnapshot.docs, ...assignedSnapshot.docs].map(
+    (file) => file.data() as FileRecord
+  )
+}
+
+export async function getFilesWithoutUpdatedUid(): Promise<FileRecord[]> {
+  const filesCollection = collection(db, FILE_COLLECTION)
+  const snapshot = await getDocs(filesCollection)
+
+  return snapshot.docs
+    .map((file) => file.data() as FileRecord)
+    .filter((file) => !file.updated_uid)
+}
+
+export async function getDashboardFilesByUser(
+  userUid: string
+): Promise<FileRecord[]> {
+  const [assignedFiles, unassignedFiles] = await Promise.all([
+    getAssignableFilesByUser(userUid),
+    getFilesWithoutUpdatedUid(),
+  ])
+  const filesByUid = new Map<string, FileRecord>()
+
+  for (const file of [...assignedFiles, ...unassignedFiles]) {
+    filesByUid.set(file.uid, file)
+  }
+
+  return Array.from(filesByUid.values())
+}
+
+export async function getUnassignedFilesCount(): Promise<number> {
+  const unassignedFiles = await getFilesWithoutUpdatedUid()
+
+  return unassignedFiles.length
+}
+
+export async function getDoneFilesCountByUser(
+  userUid: string
+): Promise<number> {
+  if (!userUid) {
+    return 0
+  }
+
+  const filesCollection = collection(db, FILE_COLLECTION)
+  const snapshot = await getDocs(
+    query(filesCollection, where('updated_uid', '==', userUid))
+  )
+
+  return snapshot.docs.reduce((total, file) => {
+    const fileRecord = file.data() as FileRecord
+
+    return total + (fileRecord.number_of_file_done || 0)
+  }, 0)
+}
+
+export async function claimFileRecord({
+  fileUid,
+  userUid,
+}: {
+  fileUid: string
+  userUid: string
+}): Promise<void> {
+  const fileRef = doc(db, FILE_COLLECTION, fileUid)
+
+  await updateDoc(fileRef, {
+    updated_uid: userUid,
+    updated_at: serverTimestamp(),
+  })
+}
+
+export async function getFileRecordsByIds(
+  fileUids: string[]
+): Promise<FileRecord[]> {
+  if (fileUids.length === 0) {
+    return []
+  }
+
+  const uniqueFileUids = Array.from(new Set(fileUids))
+  const chunks: string[][] = []
+
+  for (let index = 0; index < uniqueFileUids.length; index += 10) {
+    chunks.push(uniqueFileUids.slice(index, index + 10))
+  }
+
+  const snapshots = await Promise.all(
+    chunks.map((chunk) =>
+      getDocs(
+        query(collection(db, FILE_COLLECTION), where(documentId(), 'in', chunk))
+      )
+    )
+  )
+
+  return snapshots.flatMap((snapshot) =>
+    snapshot.docs.map((file) => file.data() as FileRecord)
+  )
 }

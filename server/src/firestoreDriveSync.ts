@@ -5,6 +5,7 @@ interface FileRecord {
   uid: string
   file_name: string
   number_of_file: number
+  number_of_file_done: number
   creator_uid: string
   updated_uid: string
   drive_folder_id: string
@@ -63,6 +64,7 @@ async function createFileRecord({
     uid: fileRef.id,
     file_name: folderName,
     number_of_file: totalFiles,
+    number_of_file_done: 0,
     creator_uid: userUid,
     updated_uid: userUid,
     drive_folder_id: folderId,
