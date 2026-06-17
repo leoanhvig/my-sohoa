@@ -1,16 +1,19 @@
 import { LockClosedIcon } from '@heroicons/react/20/solid'
+import { Eye, EyeOff, LockKeyhole, UserRound } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { getUserByUserName } from '../apis/user'
 import { useAuth } from '../contexts/AuthContext'
 import { ETypes, MessageCard } from './Atoms/MessageCard'
 import { Input } from './ui/input'
 
 export default function Login() {
-  const emailRef = useRef<HTMLInputElement>(null)
+  const userNameRef = useRef<HTMLInputElement>(null)
   const passwordRef = useRef<HTMLInputElement>(null)
   const { login, currentUser } = useAuth()
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -20,19 +23,34 @@ export default function Login() {
   async function handleSubmit(e: { preventDefault: () => void }) {
     e.preventDefault()
 
+    const userName = userNameRef.current?.value.trim() ?? ''
+    const password = passwordRef.current?.value ?? ''
+
+    if (!userName) {
+      return setError('Username is required')
+    }
+
+    if (!password) {
+      return setError('Password is required')
+    }
+
     try {
       setError('')
       setLoading(true)
-      await login(
-        emailRef.current?.value ?? '',
-        passwordRef.current?.value ?? ''
-      )
+      const userRecord = await getUserByUserName(userName)
+
+      if (!userRecord?.email) {
+        setError('Username not found')
+        return
+      }
+
+      await login(userRecord.email, password)
       navigate('/')
     } catch {
-      setError('Failed to log in')
+      setError('Invalid username or password')
+    } finally {
+      setLoading(false)
     }
-
-    setLoading(false)
   }
   return (
     <>
@@ -53,37 +71,59 @@ export default function Login() {
             <input type="hidden" name="remember" defaultValue="true" />
             <div className="space-y-4">
               <div>
-                <label htmlFor="email-address" className="sr-only">
-                  Email address
+                <label htmlFor="user-name" className="sr-only">
+                  Username
                 </label>
-                <Input
-                  id="email-address"
-                  name="email"
-                  type="email"
-                  autoComplete="email"
-                  ref={emailRef}
-                  required
-                  placeholder="Email address"
-                />
+                <div className="relative">
+                  <UserRound className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+                  <Input
+                    id="user-name"
+                    name="user_name"
+                    type="text"
+                    autoComplete="username"
+                    ref={userNameRef}
+                    required
+                    className="pl-10"
+                    placeholder="Username"
+                  />
+                </div>
               </div>
               <div>
                 <label htmlFor="password" className="sr-only">
                   Password
                 </label>
-                <Input
-                  id="password"
-                  name="password"
-                  type="password"
-                  ref={passwordRef}
-                  autoComplete="current-password"
-                  required
-                  placeholder="Password"
-                />
+                <div className="relative">
+                  <LockKeyhole className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+                  <Input
+                    id="password"
+                    name="password"
+                    type={showPassword ? 'text' : 'password'}
+                    ref={passwordRef}
+                    autoComplete="current-password"
+                    required
+                    className="pl-10 pr-10"
+                    placeholder="Password"
+                  />
+                  <button
+                    type="button"
+                    className="absolute inset-y-0 right-0 flex items-center px-3 text-slate-500 hover:text-slate-900"
+                    onClick={() => setShowPassword((value) => !value)}
+                    aria-label={
+                      showPassword ? 'Hide password' : 'Show password'
+                    }
+                  >
+                    {showPassword ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
+                  </button>
+                </div>
               </div>
             </div>
 
             <div className="flex items-center justify-between">
-              <div className="flex items-center">
+              {/* <div className="flex items-center">
                 <input
                   id="remember-me"
                   name="remember-me"
@@ -96,16 +136,16 @@ export default function Login() {
                 >
                   Remember me
                 </label>
-              </div>
+              </div> */}
 
-              <div className="text-sm">
+              {/* <div className="text-sm">
                 <Link
                   className="font-medium text-indigo-600 hover:text-indigo-500"
                   to="/forgot-password"
                 >
                   Forgot your password?
                 </Link>
-              </div>
+              </div> */}
             </div>
 
             <div>

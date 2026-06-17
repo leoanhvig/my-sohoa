@@ -10,9 +10,12 @@ import {
   signInWithPopup,
   signOut,
   User,
+  UserCredential,
 } from 'firebase/auth'
 import React, { useContext, useEffect, useState } from 'react'
+import { createUserRecord, getUserByUid } from '../apis/user'
 import { auth } from '../firebase'
+import { useUserStore } from '../stores/userStore'
 
 interface IAuthProviderProps {
   children: React.ReactNode
@@ -20,7 +23,7 @@ interface IAuthProviderProps {
 
 interface IAuthContext {
   currentUser: User | null
-  signup: (email: string, password: string) => Promise<any>
+  signup: (email: string, password: string) => Promise<UserCredential>
   login: (email: string, password: string) => Promise<any>
   googleSignin: () => Promise<any>
   githubSignin: () => Promise<any>
@@ -44,9 +47,27 @@ export function useAuth(): IAuthContext {
 export function AuthProvider({ children }: IAuthProviderProps): JSX.Element {
   const [currentUser, setCurrentUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
+  const setAuthUser = useUserStore((state) => state.setAuthUser)
+  const setUserRecord = useUserStore((state) => state.setUserRecord)
+  const setUserStoreLoading = useUserStore((state) => state.setLoading)
+  const clearUser = useUserStore((state) => state.clearUser)
 
-  function signup(email: string, password: string): Promise<any> {
-    return createUserWithEmailAndPassword(auth, email, password)
+  async function signup(
+    email: string,
+    password: string
+  ): Promise<UserCredential> {
+    const userCredential = await createUserWithEmailAndPassword(
+      auth,
+      email,
+      password
+    )
+
+    await createUserRecord({
+      uid: userCredential.user.uid,
+      email: userCredential.user.email,
+    })
+
+    return userCredential
   }
 
   function googleSignin(): Promise<any> {
@@ -92,13 +113,24 @@ export function AuthProvider({ children }: IAuthProviderProps): JSX.Element {
   }
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setCurrentUser(user)
+      setAuthUser(user)
+      setUserStoreLoading(true)
+
+      if (user) {
+        const userRecord = await getUserByUid(user.uid)
+        setUserRecord(userRecord)
+      } else {
+        clearUser()
+      }
+
+      setUserStoreLoading(false)
       setLoading(false)
     })
 
     return unsubscribe
-  }, [])
+  }, [clearUser, setAuthUser, setUserRecord, setUserStoreLoading])
 
   const value: IAuthContext = {
     currentUser,

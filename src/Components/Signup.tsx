@@ -1,4 +1,5 @@
 import { LockClosedIcon } from '@heroicons/react/20/solid'
+import { Eye, EyeOff, LockKeyhole, Mail } from 'lucide-react'
 import { useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
@@ -13,6 +14,8 @@ export default function Signup() {
   const { signup } = useAuth()
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
+  const [showPasswordConfirm, setShowPasswordConfirm] = useState(false)
   const navigate = useNavigate()
 
   async function handleSubmit(e: { preventDefault: () => void }) {
@@ -68,37 +71,79 @@ export default function Signup() {
                 <label htmlFor="email-address" className="sr-only">
                   Email address
                 </label>
-                <Input
-                  id="email-address"
-                  name="email"
-                  type="email"
-                  autoComplete="email"
-                  ref={emailRef}
-                  required
-                  placeholder="Email address"
-                />
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+                  <Input
+                    id="email-address"
+                    name="email"
+                    type="email"
+                    autoComplete="email"
+                    ref={emailRef}
+                    required
+                    className="pl-10"
+                    placeholder="Email address"
+                  />
+                </div>
               </div>
               <div>
                 <label className="sr-only">Password</label>
-                <Input
-                  id="password"
-                  name="password"
-                  type="password"
-                  ref={passwordRef}
-                  required
-                  placeholder="Password"
-                />
+                <div className="relative">
+                  <LockKeyhole className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+                  <Input
+                    id="password"
+                    name="password"
+                    type={showPassword ? 'text' : 'password'}
+                    ref={passwordRef}
+                    required
+                    className="pl-10 pr-10"
+                    placeholder="Password"
+                  />
+                  <button
+                    type="button"
+                    className="absolute inset-y-0 right-0 flex items-center px-3 text-slate-500 hover:text-slate-900"
+                    onClick={() => setShowPassword((value) => !value)}
+                    aria-label={
+                      showPassword ? 'Hide password' : 'Show password'
+                    }
+                  >
+                    {showPassword ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
+                  </button>
+                </div>
               </div>
               <div>
                 <label className="sr-only">Confirm Password</label>
-                <Input
-                  id="confirm-password"
-                  name="confirm-password"
-                  type="password"
-                  ref={passwordConfirmRef}
-                  required
-                  placeholder="Confirm Password"
-                />
+                <div className="relative">
+                  <LockKeyhole className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+                  <Input
+                    id="confirm-password"
+                    name="confirm-password"
+                    type={showPasswordConfirm ? 'text' : 'password'}
+                    ref={passwordConfirmRef}
+                    required
+                    className="pl-10 pr-10"
+                    placeholder="Confirm Password"
+                  />
+                  <button
+                    type="button"
+                    className="absolute inset-y-0 right-0 flex items-center px-3 text-slate-500 hover:text-slate-900"
+                    onClick={() => setShowPasswordConfirm((value) => !value)}
+                    aria-label={
+                      showPasswordConfirm
+                        ? 'Hide confirm password'
+                        : 'Show confirm password'
+                    }
+                  >
+                    {showPasswordConfirm ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
+                  </button>
+                </div>
               </div>
             </div>
 

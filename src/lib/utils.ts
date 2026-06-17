@@ -5,6 +5,13 @@ export function cn(...inputs: Array<string | false | null | undefined>) {
   return twMerge(inputs.filter(Boolean).join(' '))
 }
 
+export function generateDefaultUserName(userCount: number): string {
+  const nextNumber = userCount + 1
+  const suffix = nextNumber < 10 ? `0${nextNumber}` : `${nextNumber}`
+
+  return `nhaplieu${suffix}`
+}
+
 export function getSignupErrorMessage(error: unknown): string {
   if (error instanceof FirebaseError) {
     switch (error.code) {
