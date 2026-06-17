@@ -19,6 +19,7 @@ export default function DashNavbar() {
     { name: 'Dashboard', href: '/', current: false },
     { name: 'Upload', href: '/upload', current: false },
     { name: 'Form sức khỏe', href: '/health-form', current: false },
+    { name: 'List HealthForm', href: '/list-healthform', current: false },
   ])
 
   useEffect(() => {

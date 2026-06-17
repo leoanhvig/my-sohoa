@@ -61,6 +61,16 @@ export async function getUserByUid(uid: string): Promise<UserRecord | null> {
   return snapshot.data() as UserRecord
 }
 
+export async function getAllUsers(): Promise<UserRecord[]> {
+  const usersCollection = collection(db, USERS_COLLECTION)
+  const snapshot = await getDocs(usersCollection)
+
+  return snapshot.docs.map((document) => ({
+    uid: document.id,
+    ...document.data(),
+  })) as UserRecord[]
+}
+
 export async function getUserByUserName(
   userName: string
 ): Promise<UserRecord | null> {

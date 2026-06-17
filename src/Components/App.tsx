@@ -10,6 +10,7 @@ import FileDetail from './FileDetail'
 import Files from './Files'
 import ForgotPassword from './ForgotPassword'
 import HealthForm from './HealthForm'
+import HealthFormList from './HealthFormList'
 import Login from './Login'
 import PrivateRoutes from './PrivateRoutes'
 import Signup from './Signup'
@@ -30,6 +31,7 @@ function App() {
               <Route element={<Files />} path="/files" />
               <Route element={<FileDetail />} path="/file/:fileId" />
               <Route element={<HealthForm />} path="/health-form" />
+              <Route element={<HealthFormList />} path="/list-healthform" />
               <Route path="/update-profile" element={<UpdateProfile />} />
               <Route path="/upload" element={<UploadFile />} />
             </Route>
