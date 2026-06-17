@@ -15,6 +15,9 @@ export interface CreateFileRecordParams {
   number_of_file: number
   creator_uid: string
   updated_uid: string
+  drive_folder_id?: string
+  drive_folder_link?: string
+  storage_provider?: 'firebase_storage' | 'google_drive'
 }
 
 export interface FileRecord extends CreateFileRecordParams {
@@ -30,6 +33,9 @@ export async function createFileRecord({
   number_of_file,
   creator_uid,
   updated_uid,
+  drive_folder_id = '',
+  drive_folder_link = '',
+  storage_provider = 'firebase_storage',
 }: CreateFileRecordParams): Promise<FileRecord> {
   const fileRef = doc(collection(db, FILE_COLLECTION))
   const timestamp = serverTimestamp()
@@ -39,6 +45,9 @@ export async function createFileRecord({
     number_of_file,
     creator_uid,
     updated_uid,
+    drive_folder_id,
+    drive_folder_link,
+    storage_provider,
     created_at: timestamp,
     updated_at: timestamp,
   }

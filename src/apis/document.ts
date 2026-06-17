@@ -20,6 +20,13 @@ export interface CreateDocumentRecordParams {
   relative_path?: string
   storage_path?: string
   download_url?: string
+  drive_file_id?: string
+  drive_folder_id?: string
+  drive_mime_type?: string
+  drive_size?: string
+  drive_web_view_link?: string
+  drive_download_link?: string
+  storage_provider?: 'firebase_storage' | 'google_drive'
 }
 
 export interface DocumentRecord {
@@ -34,6 +41,13 @@ export interface DocumentRecord {
   relative_path: string
   storage_path: string
   download_url: string
+  drive_file_id: string
+  drive_folder_id: string
+  drive_mime_type: string
+  drive_size: string
+  drive_web_view_link: string
+  drive_download_link: string
+  storage_provider: 'firebase_storage' | 'google_drive'
   created_at: ReturnType<typeof serverTimestamp>
   updated_at: ReturnType<typeof serverTimestamp>
 }
@@ -51,6 +65,13 @@ export async function createDocumentRecord({
   relative_path = '',
   storage_path = '',
   download_url = '',
+  drive_file_id = '',
+  drive_folder_id = '',
+  drive_mime_type = '',
+  drive_size = '',
+  drive_web_view_link = '',
+  drive_download_link = '',
+  storage_provider = 'firebase_storage',
 }: CreateDocumentRecordParams): Promise<DocumentRecord> {
   const documentRef = doc(collection(db, DOCUMENTS_COLLECTION))
   const timestamp = serverTimestamp()
@@ -66,6 +87,13 @@ export async function createDocumentRecord({
     relative_path,
     storage_path,
     download_url,
+    drive_file_id,
+    drive_folder_id,
+    drive_mime_type,
+    drive_size,
+    drive_web_view_link,
+    drive_download_link,
+    storage_provider,
     created_at: timestamp,
     updated_at: timestamp,
   }
