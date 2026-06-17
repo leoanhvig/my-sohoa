@@ -1,7 +1,7 @@
-import firebase from 'firebase/compat/app'
-import 'firebase/compat/auth'
+import { initializeApp } from 'firebase/app'
+import { getAuth } from 'firebase/auth'
 
-const app = firebase.initializeApp({
+const app = initializeApp({
   apiKey: import.meta.env.VITE_API_KEY,
   authDomain: import.meta.env.VITE_AUTH_DOMAIN,
   projectId: import.meta.env.VITE_PROJECT_ID,
@@ -11,5 +11,5 @@ const app = firebase.initializeApp({
   measurementId: import.meta.env.VITE_MEASUREMENT_ID,
 })
 
-export const auth = app.auth()
+export const auth = getAuth(app)
 export default app

@@ -1,10 +1,10 @@
-import React, { useRef, useState } from 'react'
-import { useAuth } from '../contexts/AuthContext'
-import { Link, useNavigate } from 'react-router-dom'
-import { SpacerWithText } from './Atoms/SpacerWithText'
 import { LockClosedIcon } from '@heroicons/react/20/solid'
+import { useRef, useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
+import { useAuth } from '../contexts/AuthContext'
+import { getSignupErrorMessage } from '../lib/utils'
 import { ETypes, MessageCard } from './Atoms/MessageCard'
-import { SocialSignIn } from './SocialSignIn'
+import { Input } from './ui/input'
 
 export default function Signup() {
   const emailRef = useRef<HTMLInputElement>(null)
@@ -18,20 +18,32 @@ export default function Signup() {
   async function handleSubmit(e: { preventDefault: () => void }) {
     e.preventDefault()
 
-    if (passwordRef.current?.value !== passwordConfirmRef.current?.value) {
+    const email = emailRef.current?.value.trim() ?? ''
+    const password = passwordRef.current?.value ?? ''
+    const passwordConfirm = passwordConfirmRef.current?.value ?? ''
+
+    if (!email) {
+      return setError('Email is required')
+    }
+
+    if (password.length < 6) {
+      return setError('Password must be at least 6 characters')
+    }
+
+    if (password !== passwordConfirm) {
       return setError('Passwords do not match')
     }
 
     try {
       setError('')
       setLoading(true)
-      await signup(emailRef.current?.value, passwordRef.current?.value)
+      await signup(email, password)
       navigate('/')
-    } catch {
-      setError('Failed to create an account')
+    } catch (err: unknown) {
+      setError(getSignupErrorMessage(err))
+    } finally {
+      setLoading(false)
     }
-
-    setLoading(false)
   }
 
   return (
@@ -51,43 +63,40 @@ export default function Signup() {
           <MessageCard message={error} type={ETypes.DANGER} visible={!!error} />
           <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
             <input type="hidden" name="remember" defaultValue="true" />
-            <div className="-space-y-px rounded-md shadow-sm">
+            <div className="space-y-4">
               <div>
                 <label htmlFor="email-address" className="sr-only">
                   Email address
                 </label>
-                <input
+                <Input
                   id="email-address"
                   name="email"
                   type="email"
                   autoComplete="email"
                   ref={emailRef}
                   required
-                  className="relative block w-full appearance-none rounded-none rounded-t-md border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-500 focus:z-10 focus:border-indigo-500 focus:outline-none focus:ring-indigo-500 sm:text-sm"
                   placeholder="Email address"
                 />
               </div>
               <div>
                 <label className="sr-only">Password</label>
-                <input
+                <Input
                   id="password"
                   name="password"
                   type="password"
                   ref={passwordRef}
                   required
-                  className="relative block w-full appearance-none rounded-none  border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-500 focus:z-10 focus:border-indigo-500 focus:outline-none focus:ring-indigo-500 sm:text-sm"
                   placeholder="Password"
                 />
               </div>
               <div>
                 <label className="sr-only">Confirm Password</label>
-                <input
+                <Input
                   id="confirm-password"
                   name="confirm-password"
                   type="password"
                   ref={passwordConfirmRef}
                   required
-                  className="relative block w-full appearance-none rounded-none rounded-b-md border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-500 focus:z-10 focus:border-indigo-500 focus:outline-none focus:ring-indigo-500 sm:text-sm"
                   placeholder="Confirm Password"
                 />
               </div>
@@ -117,9 +126,6 @@ export default function Signup() {
               </Link>
             </div>
           </form>
-
-          <SpacerWithText text="or" />
-          <SocialSignIn setError={setError} enabled={!loading} />
         </div>
       </div>
     </>

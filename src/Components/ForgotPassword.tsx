@@ -1,8 +1,8 @@
-import { useRef, useState } from 'react'
-import { useAuth } from '../contexts/AuthContext'
-import { Link } from 'react-router-dom'
-import { ETypes, MessageCard } from './Atoms/MessageCard'
 import { LockClosedIcon } from '@heroicons/react/20/solid'
+import { useRef, useState } from 'react'
+import { Link } from 'react-router-dom'
+import { useAuth } from '../contexts/AuthContext'
+import { ETypes, MessageCard } from './Atoms/MessageCard'
 
 export default function ForgotPassword() {
   const emailRef = useRef<HTMLInputElement>(null)
@@ -17,7 +17,7 @@ export default function ForgotPassword() {
     try {
       setMessage('')
       setLoading(true)
-      await resetPassword(emailRef.current?.value)
+      await resetPassword(emailRef.current?.value ?? '')
       setMessageType(ETypes.SUCCESS)
       setMessage('Check your inbox for further instructions')
     } catch {

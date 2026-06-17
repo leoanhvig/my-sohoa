@@ -1,10 +1,10 @@
-import React, { useRef, useState } from 'react'
-import { useAuth } from '../contexts/AuthContext'
-import { Link, useNavigate } from 'react-router-dom'
 import { LockClosedIcon } from '@heroicons/react/20/solid'
-import { ETypes, MessageCard } from './Atoms/MessageCard'
+import { useRef, useState } from 'react'
 import { AiFillExclamationCircle } from 'react-icons/ai'
-import { useToast, EToastTypes } from '../contexts/ToastContext'
+import { Link, useNavigate } from 'react-router-dom'
+import { useAuth } from '../contexts/AuthContext'
+import { EToastTypes, useToast } from '../contexts/ToastContext'
+import { ETypes, MessageCard } from './Atoms/MessageCard'
 
 export default function UpdateProfile() {
   const emailRef = useRef<HTMLInputElement>(null)
@@ -26,7 +26,11 @@ export default function UpdateProfile() {
     setLoading(true)
     setError('')
 
-    if (emailRef.current?.value !== currentUser.email) {
+    if (
+      emailRef.current?.value &&
+      currentUser?.email &&
+      emailRef.current.value !== currentUser.email
+    ) {
       promises.push(updateEmail(emailRef.current?.value))
     }
     if (passwordRef.current?.value) {
@@ -74,7 +78,7 @@ export default function UpdateProfile() {
                   type="email"
                   autoComplete="email"
                   ref={emailRef}
-                  defaultValue={currentUser.email}
+                  defaultValue={currentUser?.email ?? ''}
                   required
                   className="relative block w-full appearance-none rounded-none rounded-t-md rounded-b-md border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-500 focus:z-10 focus:border-indigo-500 focus:outline-none focus:ring-indigo-500 sm:text-sm"
                   placeholder="Email address"

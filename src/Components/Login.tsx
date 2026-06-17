@@ -1,10 +1,9 @@
-import { useEffect, useRef, useState } from 'react'
-import { useAuth } from '../contexts/AuthContext'
-import { Link, useNavigate } from 'react-router-dom'
 import { LockClosedIcon } from '@heroicons/react/20/solid'
+import { useEffect, useRef, useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
+import { useAuth } from '../contexts/AuthContext'
 import { ETypes, MessageCard } from './Atoms/MessageCard'
-import { SpacerWithText } from './Atoms/SpacerWithText'
-import { SocialSignIn } from './SocialSignIn'
+import { Input } from './ui/input'
 
 export default function Login() {
   const emailRef = useRef<HTMLInputElement>(null)
@@ -16,7 +15,7 @@ export default function Login() {
 
   useEffect(() => {
     if (currentUser) navigate('/')
-  }, [])
+  }, [currentUser, navigate])
 
   async function handleSubmit(e: { preventDefault: () => void }) {
     e.preventDefault()
@@ -24,7 +23,10 @@ export default function Login() {
     try {
       setError('')
       setLoading(true)
-      await login(emailRef.current?.value, passwordRef.current?.value)
+      await login(
+        emailRef.current?.value ?? '',
+        passwordRef.current?.value ?? ''
+      )
       navigate('/')
     } catch {
       setError('Failed to log in')
@@ -49,19 +51,18 @@ export default function Login() {
           <MessageCard message={error} type={ETypes.DANGER} visible={!!error} />
           <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
             <input type="hidden" name="remember" defaultValue="true" />
-            <div className="-space-y-px rounded-md shadow-sm">
+            <div className="space-y-4">
               <div>
                 <label htmlFor="email-address" className="sr-only">
                   Email address
                 </label>
-                <input
+                <Input
                   id="email-address"
                   name="email"
                   type="email"
                   autoComplete="email"
                   ref={emailRef}
                   required
-                  className="relative block w-full appearance-none rounded-none rounded-t-md border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-500 focus:z-10 focus:border-indigo-500 focus:outline-none focus:ring-indigo-500 sm:text-sm"
                   placeholder="Email address"
                 />
               </div>
@@ -69,14 +70,13 @@ export default function Login() {
                 <label htmlFor="password" className="sr-only">
                   Password
                 </label>
-                <input
+                <Input
                   id="password"
                   name="password"
                   type="password"
                   ref={passwordRef}
                   autoComplete="current-password"
                   required
-                  className="relative block w-full appearance-none rounded-none rounded-b-md border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-500 focus:z-10 focus:border-indigo-500 focus:outline-none focus:ring-indigo-500 sm:text-sm"
                   placeholder="Password"
                 />
               </div>
@@ -132,9 +132,6 @@ export default function Login() {
               </Link>
             </div>
           </form>
-
-          <SpacerWithText text="or" />
-          <SocialSignIn setError={setError} enabled={!loading} />
         </div>
       </div>
     </>

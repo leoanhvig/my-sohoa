@@ -1,5 +1,5 @@
-import React, { useContext } from 'react'
 import axios, { AxiosRequestConfig } from 'axios'
+import React, { useContext } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 
 interface IApiProviderProps {

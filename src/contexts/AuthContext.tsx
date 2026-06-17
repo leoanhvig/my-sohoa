@@ -1,27 +1,52 @@
-import React, { useContext, useState, useEffect } from 'react'
-import { auth } from '../firebase'
 import {
-  GoogleAuthProvider,
-  signInWithPopup,
+  createUserWithEmailAndPassword,
+  updateEmail as firebaseUpdateEmail,
+  updatePassword as firebaseUpdatePassword,
   GithubAuthProvider,
+  GoogleAuthProvider,
+  onAuthStateChanged,
+  sendPasswordResetEmail,
+  signInWithEmailAndPassword,
+  signInWithPopup,
+  signOut,
+  User,
 } from 'firebase/auth'
+import React, { useContext, useEffect, useState } from 'react'
+import { auth } from '../firebase'
 
 interface IAuthProviderProps {
-  children: JSX.Element
+  children: React.ReactNode
 }
 
-const AuthContext = React.createContext({})
+interface IAuthContext {
+  currentUser: User | null
+  signup: (email: string, password: string) => Promise<any>
+  login: (email: string, password: string) => Promise<any>
+  googleSignin: () => Promise<any>
+  githubSignin: () => Promise<any>
+  logout: () => Promise<void>
+  resetPassword: (email: string) => Promise<void>
+  updateEmail: (email: string) => Promise<void>
+  updatePassword: (password: string) => Promise<void>
+  getCurrentUserToken: () => Promise<string | null>
+}
 
-export function useAuth(): any {
-  return useContext(AuthContext)
+const AuthContext = React.createContext<IAuthContext | null>(null)
+
+export function useAuth(): IAuthContext {
+  const context = useContext(AuthContext)
+  if (!context) {
+    throw new Error('useAuth must be used within AuthProvider')
+  }
+  return context
 }
 
 export function AuthProvider({ children }: IAuthProviderProps): JSX.Element {
-  const [currentUser, setCurrentUser] = useState<any>()
+  const [currentUser, setCurrentUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
 
   function signup(email: string, password: string): Promise<any> {
-    return auth.createUserWithEmailAndPassword(email, password)
+    return createUserWithEmailAndPassword(auth, email, password)
   }
 
   function googleSignin(): Promise<any> {
@@ -35,27 +60,39 @@ export function AuthProvider({ children }: IAuthProviderProps): JSX.Element {
   }
 
   function login(email: string, password: string): Promise<any> {
-    return auth.signInWithEmailAndPassword(email, password)
+    return signInWithEmailAndPassword(auth, email, password)
   }
 
-  function logout(): Promise<any> {
-    return auth.signOut()
+  function logout(): Promise<void> {
+    return signOut(auth)
   }
 
-  function resetPassword(email: string): Promise<any> {
-    return auth.sendPasswordResetEmail(email)
+  function resetPassword(email: string): Promise<void> {
+    return sendPasswordResetEmail(auth, email)
   }
 
-  function updateEmail(email: string): Promise<any> {
-    return currentUser.updateEmail(email)
+  function getCurrentUserToken(): Promise<string | null> {
+    return auth.currentUser
+      ? auth.currentUser.getIdToken()
+      : Promise.resolve(null)
   }
 
-  function updatePassword(password: string): Promise<any> {
-    return currentUser.updatePassword(password)
+  function updateEmail(email: string): Promise<void> {
+    if (!auth.currentUser) {
+      return Promise.reject(new Error('No authenticated user'))
+    }
+    return firebaseUpdateEmail(auth.currentUser, email)
+  }
+
+  function updatePassword(password: string): Promise<void> {
+    if (!auth.currentUser) {
+      return Promise.reject(new Error('No authenticated user'))
+    }
+    return firebaseUpdatePassword(auth.currentUser, password)
   }
 
   useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged((user) => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
       setCurrentUser(user)
       setLoading(false)
     })
@@ -63,7 +100,7 @@ export function AuthProvider({ children }: IAuthProviderProps): JSX.Element {
     return unsubscribe
   }, [])
 
-  const value = {
+  const value: IAuthContext = {
     currentUser,
     login,
     signup,
@@ -71,6 +108,7 @@ export function AuthProvider({ children }: IAuthProviderProps): JSX.Element {
     githubSignin,
     logout,
     resetPassword,
+    getCurrentUserToken,
     updateEmail,
     updatePassword,
   }
