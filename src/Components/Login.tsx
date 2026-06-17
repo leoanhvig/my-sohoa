@@ -5,6 +5,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { getUserByUserName } from '../apis/user'
 import { useAuth } from '../contexts/AuthContext'
 import { ETypes, MessageCard } from './Atoms/MessageCard'
+import { Button } from './ui/button'
 import { Input } from './ui/input'
 
 export default function Login() {
@@ -149,10 +150,10 @@ export default function Login() {
             </div>
 
             <div>
-              <button
+              <Button
                 type="submit"
                 disabled={loading}
-                className="group relative transition-colors flex w-full justify-center rounded-md border border-transparent bg-indigo-600 py-2 px-4 text-sm font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+                className="group relative w-full bg-indigo-600 text-white hover:bg-indigo-700"
               >
                 <span className="absolute inset-y-0 left-0 flex items-center pl-3">
                   <LockClosedIcon
@@ -160,8 +161,8 @@ export default function Login() {
                     aria-hidden="true"
                   />
                 </span>
-                Sign in
-              </button>
+                {loading ? 'Signing in...' : 'Sign in'}
+              </Button>
             </div>
             <div className="text-sm text-center">
               <Link

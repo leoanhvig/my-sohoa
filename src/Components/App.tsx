@@ -8,9 +8,9 @@ import Dashboard from './Dashboard'
 import ForgotPassword from './ForgotPassword'
 import Login from './Login'
 import PrivateRoutes from './PrivateRoutes'
-import Projects from './Projects'
 import Signup from './Signup'
 import UpdateProfile from './UpdateProfile'
+import UploadFile from './UploadFile'
 
 function App() {
   const providers = [ToastProvider, AuthProvider, ApiProvider]
@@ -21,7 +21,7 @@ function App() {
           <Route element={<PrivateRoutes />}>
             <Route element={<Dashboard />} path="/" />
             <Route path="/update-profile" element={<UpdateProfile />} />
-            <Route path="projects" element={<Projects />} />
+            <Route path="/upload" element={<UploadFile />} />
           </Route>
           <Route path="/signup" element={<Signup />} />
           <Route path="/login" element={<Login />} />

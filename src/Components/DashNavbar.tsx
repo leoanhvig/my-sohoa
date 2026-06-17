@@ -1,11 +1,11 @@
-import { useEffect, useState } from 'react'
-import { Disclosure, Menu, Transition } from '@headlessui/react'
+import { Disclosure, Menu } from '@headlessui/react'
 import { Bars3Icon, BellIcon, XMarkIcon } from '@heroicons/react/24/outline'
-import DropdownMenu, { IMenuOption } from './Atoms/DropdownMenu'
-import { FiLogOut, FiEdit, FiEdit2 } from 'react-icons/fi'
-import { useAuth } from '../contexts/AuthContext'
+import { useEffect, useState } from 'react'
+import { FiEdit2, FiLogOut } from 'react-icons/fi'
 import { Link, useNavigate } from 'react-router-dom'
-import { useToast, EToastTypes } from '../contexts/ToastContext'
+import { useAuth } from '../contexts/AuthContext'
+import { useToast } from '../contexts/ToastContext'
+import DropdownMenu, { IMenuOption } from './Atoms/DropdownMenu'
 
 function classNames(...classes: Array<string>) {
   return classes.filter(Boolean).join(' ')
@@ -17,7 +17,7 @@ export default function DashNavbar() {
 
   const [navigation, setNavigation] = useState([
     { name: 'Dashboard', href: '/', current: false },
-    { name: 'Projects', href: '/projects', current: false },
+    { name: 'Upload', href: '/upload', current: false },
   ])
 
   useEffect(() => {
