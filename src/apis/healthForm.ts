@@ -85,6 +85,15 @@ export async function getHealthFormRecordsByCreator(
   })) as HealthFormRecord[]
 }
 
+export async function getAllHealthFormRecords(): Promise<HealthFormRecord[]> {
+  const snapshot = await getDocs(collection(db, HEALTH_FORM_COLLECTION))
+
+  return snapshot.docs.map((document) => ({
+    uid: document.id,
+    ...document.data(),
+  })) as HealthFormRecord[]
+}
+
 export async function getHealthFormRecordsCountByCreator(
   creator: string
 ): Promise<number> {

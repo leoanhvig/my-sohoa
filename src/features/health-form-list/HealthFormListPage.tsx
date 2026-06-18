@@ -1,4 +1,5 @@
 import { HealthFormRecord } from '@/apis/healthForm'
+import { Button } from '@/Components/ui/button'
 import {
   useHealthFormRecords,
   useHealthFormRecordsCount,
@@ -9,9 +10,11 @@ import { HealthFormListHeader } from './components/HealthFormListHeader'
 import { HealthFormRecordDialog } from './components/HealthFormRecordDialog'
 import { HealthFormRecordsTable } from './components/HealthFormRecordsTable'
 import { UserSelectHeader } from './components/UserSelectHeader'
+import { useExportHealthFormExcel } from './hooks/useExportHealthFormExcel'
 
 export default function HealthFormListPage() {
   const authUser = useUserStore((state) => state.authUser)
+  const { exportAllHealthForms, isExporting } = useExportHealthFormExcel()
   const [selectedCreator, setSelectedCreator] = useState('')
   const [viewRecord, setViewRecord] = useState<HealthFormRecord | null>(null)
   const {
@@ -29,10 +32,21 @@ export default function HealthFormListPage() {
         <HealthFormListHeader
           currentUserRecordsCount={currentUserRecordsCount}
         />
-        <UserSelectHeader
-          selectedCreator={selectedCreator}
-          onSelectedCreatorChange={setSelectedCreator}
-        />
+        <div className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-end">
+          <UserSelectHeader
+            selectedCreator={selectedCreator}
+            onSelectedCreatorChange={setSelectedCreator}
+          />
+          <Button
+            type="button"
+            size="lg"
+            variant="outline"
+            onClick={exportAllHealthForms}
+            disabled={isExporting}
+          >
+            {isExporting ? 'Đang export...' : 'Export Excel'}
+          </Button>
+        </div>
         <HealthFormRecordsTable
           records={records}
           selectedCreator={selectedCreator}
