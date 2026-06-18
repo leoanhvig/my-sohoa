@@ -8,17 +8,18 @@ import {
 } from '@/Components/ui/select'
 import { useUserStore } from '@/stores/userStore'
 import { useQuery } from '@tanstack/react-query'
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 
 interface UserSelectHeaderProps {
+  selectedCreator: string
   onSelectedCreatorChange: (value: string) => void
 }
 
 export function UserSelectHeader({
+  selectedCreator,
   onSelectedCreatorChange,
 }: UserSelectHeaderProps) {
   const authUser = useUserStore((state) => state.authUser)
-  const [selectedCreator, setSelectedCreator] = useState('')
   const { data: users = [], isLoading: isLoadingUsers } = useQuery<
     UserRecord[]
   >({
@@ -28,13 +29,11 @@ export function UserSelectHeader({
 
   useEffect(() => {
     if (authUser?.uid && !selectedCreator) {
-      setSelectedCreator(authUser.uid)
       onSelectedCreatorChange(authUser.uid)
     }
   }, [authUser?.uid, onSelectedCreatorChange, selectedCreator])
 
   function handleSelectedCreatorChange(value: string) {
-    setSelectedCreator(value)
     onSelectedCreatorChange(value)
   }
 
@@ -42,7 +41,6 @@ export function UserSelectHeader({
 
   return (
     <div className="flex flex-row justify-between gap-3">
-      <span>Hành động</span>
       {shouldShowSelect && (
         <Select
           value={selectedCreator}
@@ -53,7 +51,7 @@ export function UserSelectHeader({
             <SelectValue placeholder="Chọn user" />
           </SelectTrigger>
           <SelectContent position="popper" align="start" className="w-64">
-            {users.map((user) => (
+            {users.map((user: UserRecord) => (
               <SelectItem key={user.uid} value={user.uid}>
                 {user.user_name}
                 {user.uid === authUser?.uid ? ' (hiện tại)' : ''}

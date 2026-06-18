@@ -8,6 +8,7 @@ import { useState } from 'react'
 import { HealthFormListHeader } from './components/HealthFormListHeader'
 import { HealthFormRecordDialog } from './components/HealthFormRecordDialog'
 import { HealthFormRecordsTable } from './components/HealthFormRecordsTable'
+import { UserSelectHeader } from './components/UserSelectHeader'
 
 export default function HealthFormListPage() {
   const authUser = useUserStore((state) => state.authUser)
@@ -17,7 +18,7 @@ export default function HealthFormListPage() {
     data: records = [],
     isLoading,
     error,
-  } = useHealthFormRecords(selectedCreator)
+  } = useHealthFormRecords(selectedCreator ?? authUser?.uid ?? '')
   const { data: currentUserRecordsCount = 0 } = useHealthFormRecordsCount(
     authUser?.uid
   )
@@ -27,6 +28,10 @@ export default function HealthFormListPage() {
       <div className="mx-auto max-w-7xl space-y-6">
         <HealthFormListHeader
           currentUserRecordsCount={currentUserRecordsCount}
+        />
+        <UserSelectHeader
+          selectedCreator={selectedCreator}
+          onSelectedCreatorChange={setSelectedCreator}
         />
         <HealthFormRecordsTable
           records={records}

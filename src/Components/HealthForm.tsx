@@ -602,8 +602,7 @@ export default function HealthForm() {
             Xóa form
           </button>
           <button
-            type="button"
-            onClick={handleSubmit(onSubmit)}
+            type="submit"
             disabled={isSaving}
             className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60"
           >

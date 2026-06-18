@@ -1,13 +1,22 @@
 import { HealthFormRecord } from '@/apis/healthForm'
 
+type FirestoreTimestampLike = {
+  toDate: () => Date
+}
+
+function hasToDate(value: unknown): value is FirestoreTimestampLike {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'toDate' in value &&
+    typeof (value as { toDate?: unknown }).toDate === 'function'
+  )
+}
+
 export function formatValue(value: unknown): string {
   if (value === null || value === undefined) return ''
 
-  if (
-    typeof value === 'object' &&
-    'toDate' in value &&
-    typeof value.toDate === 'function'
-  ) {
+  if (hasToDate(value)) {
     return value.toDate().toLocaleString('vi-VN')
   }
 
