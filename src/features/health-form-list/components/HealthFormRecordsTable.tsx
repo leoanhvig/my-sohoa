@@ -1,23 +1,20 @@
 import { HealthFormRecord } from '@/apis/healthForm'
-import { Button } from '@/Components/ui/button'
-import { useUserStore } from '@/stores/userStore'
 import {
   ColumnDef,
   flexRender,
   getCoreRowModel,
   useReactTable,
 } from '@tanstack/react-table'
-import { Eye, Loader2, Pencil } from 'lucide-react'
+import { Loader2 } from 'lucide-react'
 import { useMemo } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { formatValue, getRecordColumns } from '../utils'
+import { HealthFormRecordActions } from './HealthFormRecordActions'
 
 interface HealthFormRecordsTableProps {
   records: HealthFormRecord[]
   selectedCreator: string
   isLoading: boolean
   error: unknown
-  onSelectedCreatorChange: (value: string) => void
   onViewRecord: (record: HealthFormRecord) => void
 }
 
@@ -26,22 +23,18 @@ export function HealthFormRecordsTable({
   selectedCreator,
   isLoading,
   error,
-  onSelectedCreatorChange,
   onViewRecord,
 }: HealthFormRecordsTableProps) {
-  const navigate = useNavigate()
-  const authUser = useUserStore((state) => state.authUser)
-  const isViewingCurrentUser = selectedCreator === authUser?.uid
   const tableColumns = useMemo<ColumnDef<HealthFormRecord>[]>(() => {
     const dynamicColumns = getRecordColumns(records).map<
       ColumnDef<HealthFormRecord>
     >((column) => ({
-      id: column,
-      accessorFn: (record) => record[column],
-      header: column,
+      id: column.field,
+      accessorFn: (record) => record[column.field],
+      header: column.title,
       cell: ({ row }) => (
-        <span title={formatValue(row.original[column])}>
-          {formatValue(row.original[column])}
+        <span title={formatValue(row.original[column.field])}>
+          {formatValue(row.original[column.field])}
         </span>
       ),
     }))
@@ -50,40 +43,17 @@ export function HealthFormRecordsTable({
       {
         id: 'action',
         header: () => <label>Hành động</label>,
-        cell: ({ row }) =>
-          isViewingCurrentUser ? (
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              onClick={() =>
-                navigate(`/health-form?recordId=${row.original.uid}`)
-              }
-            >
-              <Pencil className="mr-2 h-4 w-4" /> Cập nhật
-            </Button>
-          ) : (
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              onClick={() => onViewRecord(row.original)}
-            >
-              <Eye className="mr-2 h-4 w-4" /> View data
-            </Button>
-          ),
+        cell: ({ row }) => (
+          <HealthFormRecordActions
+            record={row.original}
+            selectedCreator={selectedCreator}
+            onViewRecord={onViewRecord}
+          />
+        ),
       },
       ...dynamicColumns,
     ]
-  }, [
-    authUser?.uid,
-    isViewingCurrentUser,
-    navigate,
-    onSelectedCreatorChange,
-    onViewRecord,
-    records,
-    selectedCreator,
-  ])
+  }, [onViewRecord, records, selectedCreator])
   const table = useReactTable({
     data: records,
     columns: tableColumns,

@@ -44,7 +44,6 @@ export default function HealthFormListPage() {
           selectedCreator={selectedCreator}
           isLoading={isLoading}
           error={error}
-          onSelectedCreatorChange={setSelectedCreator}
           onViewRecord={setViewRecord}
         />
       </div>
