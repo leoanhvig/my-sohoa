@@ -1,4 +1,19 @@
-import { useEffect } from 'react'
+import {
+  addHealthFormRecord,
+  findDuplicateHealthFormRecord,
+} from '@/apis/healthForm'
+import { Button } from '@/Components/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/Components/ui/dialog'
+import { EToastTypes, useToast } from '@/contexts/ToastContext'
+import { useUserStore } from '@/stores/userStore'
+import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 
 type HealthFormValues = Record<string, string>
@@ -10,7 +25,14 @@ type HealthFormField = {
   placeholder?: string
   options?: string[]
   saveData?: boolean
+  required?: boolean
 }
+
+type PendingDuplicateSave = {
+  values: HealthFormValues
+  patientCode: string
+  fullName: string
+} | null
 
 const savedFieldLabels = [
   'STT/Mã bệnh nhân',
@@ -265,6 +287,9 @@ const baseFormFields: HealthFormField[] = [
 const formFields: HealthFormField[] = baseFormFields.map((field) => ({
   ...field,
   saveData: savedFieldLabels.includes(field.label),
+  required: ['patientCode', 'fullName', 'clinicLocation', 'examDate'].includes(
+    field.name
+  ),
 }))
 
 function FieldInput({
@@ -276,11 +301,14 @@ function FieldInput({
 }) {
   const baseClassName =
     'mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm'
+  const registerOptions = field.required
+    ? { required: `${field.label} là bắt buộc` }
+    : undefined
 
   if (field.component === 'textarea') {
     return (
       <textarea
-        {...register(field.name)}
+        {...register(field.name, registerOptions)}
         rows={3}
         placeholder={field.placeholder}
         className={baseClassName}
@@ -290,7 +318,10 @@ function FieldInput({
 
   if (field.component === 'select') {
     return (
-      <select {...register(field.name)} className={baseClassName}>
+      <select
+        {...register(field.name, registerOptions)}
+        className={baseClassName}
+      >
         <option value="">Chọn thông tin</option>
         {field.options?.map((option) => (
           <option key={option} value={option}>
@@ -303,7 +334,7 @@ function FieldInput({
 
   return (
     <input
-      {...register(field.name)}
+      {...register(field.name, registerOptions)}
       type="text"
       placeholder={field.placeholder}
       className={baseClassName}
@@ -312,28 +343,39 @@ function FieldInput({
 }
 
 export default function HealthForm() {
-  const { handleSubmit, register, reset, setValue, watch } =
-    useForm<HealthFormValues>({
-      defaultValues: {
-        ethnicity: 'Kinh',
-        relationshipStatus: 'Một bạn đời',
-        contraception: 'Không',
-        hpvVaccinated: 'Chưa tiêm',
-        cervicalCancerScreened: 'Chưa bao giờ',
-        gynecologicalDisease: 'Không',
-        underlyingDisease: 'Không',
-        smoking: 'Không',
-        alcohol: 'Không',
-        hivStatus: 'Âm tính',
-        immunosuppressant: 'Không',
-        exercise: 'Không',
-        swimming: 'Không',
-        familyCervicalCancer: 'Không',
-        currentSymptoms: 'Không',
-        aiResult: 'Bình thường',
-        treatmentPlan: 'Tái khám sau 1 năm',
-      },
-    })
+  const authUser = useUserStore((state) => state.authUser)
+  const { showError, showTypedToast } = useToast()
+  const [isSaving, setIsSaving] = useState(false)
+  const [pendingDuplicateSave, setPendingDuplicateSave] =
+    useState<PendingDuplicateSave>(null)
+  const {
+    handleSubmit,
+    register,
+    reset,
+    setValue,
+    watch,
+    formState: { errors },
+  } = useForm<HealthFormValues>({
+    defaultValues: {
+      ethnicity: 'Kinh',
+      relationshipStatus: 'Một bạn đời',
+      contraception: 'Không',
+      hpvVaccinated: 'Chưa tiêm',
+      cervicalCancerScreened: 'Chưa bao giờ',
+      gynecologicalDisease: 'Không',
+      underlyingDisease: 'Không',
+      smoking: 'Không',
+      alcohol: 'Không',
+      hivStatus: 'Âm tính',
+      immunosuppressant: 'Không',
+      exercise: 'Không',
+      swimming: 'Không',
+      familyCervicalCancer: 'Không',
+      currentSymptoms: 'Không',
+      aiResult: 'Bình thường',
+      treatmentPlan: 'Tái khám sau 1 năm',
+    },
+  })
   const contraception = watch('contraception')
   const hpvVaccinated = watch('hpvVaccinated')
   const cervicalCancerScreened = watch('cervicalCancerScreened')
@@ -426,7 +468,11 @@ export default function HealthForm() {
     )
   }
 
-  function onSubmit(values: HealthFormValues) {
+  async function saveHealthForm(values: HealthFormValues) {
+    if (!authUser?.uid) {
+      throw new Error('User is not authenticated')
+    }
+
     const savedValues = formFields
       .filter((field) => field.saveData)
       .reduce<HealthFormValues>((result, field) => {
@@ -434,7 +480,67 @@ export default function HealthForm() {
         return result
       }, {})
 
-    console.log('Health form saved values:', savedValues)
+    await addHealthFormRecord({
+      ...savedValues,
+      creator: authUser.uid,
+    })
+  }
+
+  async function onSubmit(values: HealthFormValues) {
+    if (!authUser?.uid) {
+      showError('Bạn cần đăng nhập trước khi lưu thông tin.')
+      return
+    }
+
+    setIsSaving(true)
+
+    try {
+      const duplicateRecord = await findDuplicateHealthFormRecord({
+        creator: authUser.uid,
+        patientCode: values.patientCode,
+        fullName: values.fullName,
+        examDate: values.examDate,
+        clinicLocation: values.clinicLocation,
+      })
+
+      if (duplicateRecord) {
+        setPendingDuplicateSave({
+          values,
+          patientCode: values.patientCode,
+          fullName: values.fullName,
+        })
+        return
+      }
+
+      await saveHealthForm(values)
+      showTypedToast(EToastTypes.SUCCESS, 'Đã lưu thông tin sức khỏe')
+      reset()
+    } catch (error) {
+      showError(
+        'Không thêm được thông tin vào cơ sở dữ liệu. Vui lòng thử lại.'
+      )
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  async function handleConfirmDuplicateSave() {
+    if (!pendingDuplicateSave) return
+
+    setIsSaving(true)
+
+    try {
+      await saveHealthForm(pendingDuplicateSave.values)
+      showTypedToast(EToastTypes.SUCCESS, 'Đã lưu thông tin sức khỏe')
+      setPendingDuplicateSave(null)
+      reset()
+    } catch (error) {
+      showError(
+        'Không thêm được thông tin vào cơ sở dữ liệu. Vui lòng thử lại.'
+      )
+    } finally {
+      setIsSaving(false)
+    }
   }
 
   return (
@@ -453,22 +559,6 @@ export default function HealthForm() {
                 Nhập thông tin khám, tiền sử và hướng xử trí của bệnh nhân.
               </p>
             </div>
-
-            <div className="flex gap-3">
-              <button
-                type="button"
-                onClick={() => reset()}
-                className="rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-bold text-slate-700 shadow-sm transition hover:bg-slate-50"
-              >
-                Xóa form
-              </button>
-              <button
-                type="submit"
-                className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-indigo-700"
-              >
-                Lưu thông tin
-              </button>
-            </div>
           </div>
         </section>
 
@@ -486,8 +576,16 @@ export default function HealthForm() {
                 >
                   <span className="text-sm font-bold text-slate-700">
                     {field.label}
+                    {field.required ? (
+                      <span className="text-red-500"> *</span>
+                    ) : null}
                   </span>
                   <FieldInput field={field} register={register} />
+                  {errors[field.name]?.message ? (
+                    <p className="mt-1 text-sm text-red-600">
+                      {errors[field.name]?.message}
+                    </p>
+                  ) : null}
                 </label>
               )
             )}
@@ -498,18 +596,55 @@ export default function HealthForm() {
           <button
             type="button"
             onClick={() => reset()}
+            disabled={isSaving}
             className="rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-bold text-slate-700 shadow-sm transition hover:bg-slate-50"
           >
             Xóa form
           </button>
           <button
-            type="submit"
-            className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-indigo-700"
+            type="button"
+            onClick={handleSubmit(onSubmit)}
+            disabled={isSaving}
+            className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            Lưu thông tin
+            {isSaving ? 'Đang lưu...' : 'Lưu thông tin'}
           </button>
         </div>
       </form>
+
+      <Dialog
+        open={Boolean(pendingDuplicateSave)}
+        onOpenChange={(open) => {
+          if (!open) setPendingDuplicateSave(null)
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Xác nhận thêm thông tin</DialogTitle>
+            <DialogDescription>
+              Đã có bệnh nhân {pendingDuplicateSave?.fullName}, mã số:{' '}
+              {pendingDuplicateSave?.patientCode}. Bạn có muốn thêm không?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setPendingDuplicateSave(null)}
+              disabled={isSaving}
+            >
+              Không
+            </Button>
+            <Button
+              type="button"
+              onClick={handleConfirmDuplicateSave}
+              disabled={isSaving}
+            >
+              {isSaving ? 'Đang thêm...' : 'Có, thêm'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </main>
   )
 }
