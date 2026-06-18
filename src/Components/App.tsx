@@ -31,6 +31,10 @@ function App() {
               <Route element={<Files />} path="/files" />
               <Route element={<FileDetail />} path="/file/:fileId" />
               <Route element={<HealthForm />} path="/health-form" />
+              <Route
+                element={<HealthForm />}
+                path="/health-form/update/:recordId"
+              />
               <Route element={<HealthFormList />} path="/list-healthform" />
               <Route path="/update-profile" element={<UpdateProfile />} />
               <Route path="/upload" element={<UploadFile />} />

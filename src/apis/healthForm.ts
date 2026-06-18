@@ -1,10 +1,13 @@
 import {
   addDoc,
   collection,
+  doc,
   getCountFromServer,
+  getDoc,
   getDocs,
   query,
   serverTimestamp,
+  updateDoc,
   where,
 } from 'firebase/firestore'
 import { db } from '../firebase'
@@ -28,6 +31,31 @@ export async function addHealthFormRecord(
   })
 
   return document.id
+}
+
+export async function getHealthFormRecordById(
+  recordId: string
+): Promise<HealthFormRecord | null> {
+  if (!recordId) return null
+
+  const document = await getDoc(doc(db, HEALTH_FORM_COLLECTION, recordId))
+
+  if (!document.exists()) return null
+
+  return {
+    uid: document.id,
+    ...document.data(),
+  } as HealthFormRecord
+}
+
+export async function updateHealthFormRecord(
+  recordId: string,
+  record: Record<string, unknown>
+): Promise<void> {
+  await updateDoc(doc(db, HEALTH_FORM_COLLECTION, recordId), {
+    ...record,
+    updated_at: serverTimestamp(),
+  })
 }
 
 export async function findDuplicateHealthFormRecord({

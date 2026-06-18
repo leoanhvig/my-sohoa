@@ -1,4 +1,5 @@
 import { HealthFormRecord } from '@/apis/healthForm'
+import { Button } from '@/Components/ui/button'
 import {
   ColumnDef,
   flexRender,
@@ -15,7 +16,12 @@ interface HealthFormRecordsTableProps {
   selectedCreator: string
   isLoading: boolean
   error: unknown
-  onViewRecord: (record: HealthFormRecord) => void
+  currentPage: number
+  totalPages: number
+  totalRecords: number
+  recordsPerPage: number
+  onPreviousPage: () => void
+  onNextPage: () => void
 }
 
 export function HealthFormRecordsTable({
@@ -23,7 +29,12 @@ export function HealthFormRecordsTable({
   selectedCreator,
   isLoading,
   error,
-  onViewRecord,
+  currentPage,
+  totalPages,
+  totalRecords,
+  recordsPerPage,
+  onPreviousPage,
+  onNextPage,
 }: HealthFormRecordsTableProps) {
   const tableColumns = useMemo<ColumnDef<HealthFormRecord>[]>(() => {
     const dynamicColumns = getRecordColumns(records).map<
@@ -47,18 +58,20 @@ export function HealthFormRecordsTable({
           <HealthFormRecordActions
             record={row.original}
             selectedCreator={selectedCreator}
-            onViewRecord={onViewRecord}
           />
         ),
       },
       ...dynamicColumns,
     ]
-  }, [onViewRecord, records, selectedCreator])
+  }, [records, selectedCreator])
   const table = useReactTable({
     data: records,
     columns: tableColumns,
     getCoreRowModel: getCoreRowModel(),
   })
+  const startRecord =
+    totalRecords === 0 ? 0 : (currentPage - 1) * recordsPerPage + 1
+  const endRecord = Math.min(currentPage * recordsPerPage, totalRecords)
 
   return (
     <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
@@ -140,6 +153,34 @@ export function HealthFormRecordsTable({
               )}
             </tbody>
           </table>
+        </div>
+        <div className="flex flex-col gap-3 border-t border-slate-200 px-4 py-3 text-sm text-slate-600 sm:flex-row sm:items-center sm:justify-between">
+          <span>
+            Hiển thị {startRecord}-{endRecord} / {totalRecords} record
+          </span>
+          <div className="flex items-center gap-3">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={onPreviousPage}
+              disabled={isLoading || currentPage <= 1}
+            >
+              Prev
+            </Button>
+            <span className="font-semibold text-slate-700">
+              Page {currentPage} / {totalPages}
+            </span>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={onNextPage}
+              disabled={isLoading || currentPage >= totalPages}
+            >
+              Next
+            </Button>
+          </div>
         </div>
       </>
     </section>

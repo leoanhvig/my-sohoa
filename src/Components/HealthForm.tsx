@@ -1,6 +1,8 @@
 import {
   addHealthFormRecord,
   findDuplicateHealthFormRecord,
+  getHealthFormRecordById,
+  updateHealthFormRecord,
 } from '@/apis/healthForm'
 import { Button } from '@/Components/ui/button'
 import {
@@ -13,8 +15,10 @@ import {
 } from '@/Components/ui/dialog'
 import { EToastTypes, useToast } from '@/contexts/ToastContext'
 import { useUserStore } from '@/stores/userStore'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
+import { useNavigate, useParams } from 'react-router-dom'
 
 type HealthFormValues = Record<string, string>
 
@@ -344,10 +348,21 @@ function FieldInput({
 
 export default function HealthForm() {
   const authUser = useUserStore((state) => state.authUser)
+  const navigate = useNavigate()
+  const queryClient = useQueryClient()
+  const { recordId } = useParams<{ recordId: string }>()
   const { showError, showTypedToast } = useToast()
   const [isSaving, setIsSaving] = useState(false)
   const [pendingDuplicateSave, setPendingDuplicateSave] =
     useState<PendingDuplicateSave>(null)
+  const isUpdateMode = Boolean(recordId)
+  const { data: updatingRecord, isLoading: isLoadingUpdatingRecord } = useQuery(
+    {
+      queryKey: ['health-form', 'record', recordId],
+      queryFn: () => getHealthFormRecordById(recordId || ''),
+      enabled: isUpdateMode,
+    }
+  )
   const {
     handleSubmit,
     register,
@@ -376,6 +391,33 @@ export default function HealthForm() {
       treatmentPlan: 'Tái khám sau 1 năm',
     },
   })
+
+  useEffect(() => {
+    if (!isUpdateMode || !updatingRecord) return
+
+    const formValues = formFields.reduce<HealthFormValues>((result, field) => {
+      const value = updatingRecord[field.name]
+      result[field.name] =
+        typeof value === 'string' ? value : String(value ?? '')
+      return result
+    }, {})
+
+    reset(formValues)
+  }, [isUpdateMode, reset, updatingRecord])
+
+  useEffect(() => {
+    if (!isUpdateMode || isLoadingUpdatingRecord || updatingRecord) return
+
+    showError('Không tìm thấy HealthForm cần cập nhật.')
+    navigate('/list-healthform')
+  }, [
+    isLoadingUpdatingRecord,
+    isUpdateMode,
+    navigate,
+    showError,
+    updatingRecord,
+  ])
+
   const contraception = watch('contraception')
   const hpvVaccinated = watch('hpvVaccinated')
   const cervicalCancerScreened = watch('cervicalCancerScreened')
@@ -495,6 +537,14 @@ export default function HealthForm() {
     setIsSaving(true)
 
     try {
+      if (isUpdateMode && recordId) {
+        await saveUpdatedHealthForm(recordId, values)
+        showTypedToast(EToastTypes.SUCCESS, 'Đã cập nhật thông tin sức khỏe')
+        await queryClient.invalidateQueries({ queryKey: ['health-form'] })
+        navigate('/list-healthform')
+        return
+      }
+
       const duplicateRecord = await findDuplicateHealthFormRecord({
         creator: authUser.uid,
         patientCode: values.patientCode,
@@ -543,6 +593,30 @@ export default function HealthForm() {
     }
   }
 
+  async function saveUpdatedHealthForm(
+    recordId: string,
+    values: HealthFormValues
+  ) {
+    const savedValues = formFields
+      .filter((field) => field.saveData)
+      .reduce<HealthFormValues>((result, field) => {
+        result[field.name] = values[field.name] || ''
+        return result
+      }, {})
+
+    await updateHealthFormRecord(recordId, savedValues)
+  }
+
+  if (isLoadingUpdatingRecord) {
+    return (
+      <main className="min-h-screen bg-slate-50 px-4 py-8 text-slate-900 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-7xl rounded-xl border border-slate-200 bg-white p-6 text-sm font-semibold text-slate-500 shadow-sm">
+          Đang tải thông tin HealthForm...
+        </div>
+      </main>
+    )
+  }
+
   return (
     <main className="min-h-screen bg-slate-50 px-4 py-8 text-slate-900 sm:px-6 lg:px-8">
       <form
@@ -553,10 +627,12 @@ export default function HealthForm() {
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div>
               <h1 className="text-2xl font-bold tracking-tight text-slate-900">
-                Form sức khỏe
+                {isUpdateMode ? 'Cập nhật form sức khỏe' : 'Form sức khỏe'}
               </h1>
               <p className="mt-1 text-sm text-slate-500">
-                Nhập thông tin khám, tiền sử và hướng xử trí của bệnh nhân.
+                {isUpdateMode
+                  ? 'Chỉnh sửa thông tin khám, tiền sử và hướng xử trí của bệnh nhân.'
+                  : 'Nhập thông tin khám, tiền sử và hướng xử trí của bệnh nhân.'}
               </p>
             </div>
           </div>
@@ -599,14 +675,20 @@ export default function HealthForm() {
             disabled={isSaving}
             className="rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-bold text-slate-700 shadow-sm transition hover:bg-slate-50"
           >
-            Xóa form
+            {isUpdateMode ? 'Reset form' : 'Xóa form'}
           </button>
           <button
             type="submit"
             disabled={isSaving}
             className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {isSaving ? 'Đang lưu...' : 'Lưu thông tin'}
+            {isSaving
+              ? isUpdateMode
+                ? 'Đang cập nhật...'
+                : 'Đang lưu...'
+              : isUpdateMode
+              ? 'Cập nhật thông tin'
+              : 'Lưu thông tin'}
           </button>
         </div>
       </form>
