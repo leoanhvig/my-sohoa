@@ -1,9 +1,6 @@
 import { HealthFormRecord } from '@/apis/healthForm'
 import { Button } from '@/Components/ui/button'
-import {
-  useHealthFormRecords,
-  useHealthFormRecordsCount,
-} from '@/hooks/useHealthFormRecords'
+import { useHealthFormRecords } from '@/hooks/useHealthFormRecords'
 import { useUserStore } from '@/stores/userStore'
 import { useState } from 'react'
 import { HealthFormListHeader } from './components/HealthFormListHeader'
@@ -22,16 +19,11 @@ export default function HealthFormListPage() {
     isLoading,
     error,
   } = useHealthFormRecords(selectedCreator ?? authUser?.uid ?? '')
-  const { data: currentUserRecordsCount = 0 } = useHealthFormRecordsCount(
-    authUser?.uid
-  )
 
   return (
     <main className="min-h-screen bg-slate-50 px-4 py-8 text-slate-900 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-7xl space-y-6">
-        <HealthFormListHeader
-          currentUserRecordsCount={currentUserRecordsCount}
-        />
+        <HealthFormListHeader />
         <div className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-end">
           <UserSelectHeader
             selectedCreator={selectedCreator}

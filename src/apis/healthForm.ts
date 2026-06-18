@@ -1,6 +1,7 @@
 import {
   addDoc,
   collection,
+  getCountFromServer,
   getDocs,
   query,
   serverTimestamp,
@@ -103,7 +104,15 @@ export async function getHealthFormRecordsCountByCreator(
     collection(db, HEALTH_FORM_COLLECTION),
     where('creator', '==', creator)
   )
-  const snapshot = await getDocs(healthFormQuery)
+  const snapshot = await getCountFromServer(healthFormQuery)
 
-  return snapshot.size
+  return snapshot.data().count
+}
+
+export async function getHealthFormRecordsTotalCount(): Promise<number> {
+  const snapshot = await getCountFromServer(
+    collection(db, HEALTH_FORM_COLLECTION)
+  )
+
+  return snapshot.data().count
 }

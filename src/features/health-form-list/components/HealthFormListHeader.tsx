@@ -1,23 +1,43 @@
-interface HealthFormListHeaderProps {
-  currentUserRecordsCount: number
-}
+import {
+  useHealthFormRecordsCount,
+  useHealthFormRecordsTotalCount,
+} from '@/hooks/useHealthFormRecords'
+import { useUserStore } from '@/stores/userStore'
 
-export function HealthFormListHeader({
-  currentUserRecordsCount,
-}: HealthFormListHeaderProps) {
+export function HealthFormListHeader() {
+  const authUser = useUserStore((state) => state.authUser)
+  const { data: currentUserRecordsCount = 0 } = useHealthFormRecordsCount(
+    authUser?.uid
+  )
+  const { data: totalRecordsCount = 0 } = useHealthFormRecordsTotalCount()
+
   return (
-    <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900">
-            List HealthForm
-          </h1>
-          <p className="mt-1 text-sm text-slate-500">
-            Chọn user để xem danh sách form sức khỏe đã nhập.
-          </p>
+    <section className="grid gap-4 sm:grid-cols-2">
+      <div className="rounded-xl border border-indigo-100 bg-white p-6 shadow-sm">
+        <p className="text-sm font-semibold text-slate-500">
+          Tổng dự liệu bạn đã nhập
+        </p>
+        <div className="mt-3 flex items-end gap-2">
+          <span className="text-3xl font-bold tracking-tight text-indigo-700">
+            {currentUserRecordsCount}
+          </span>
+          <span className="pb-1 text-sm font-semibold text-slate-500">
+            record
+          </span>
         </div>
-        <div className="rounded-full bg-indigo-50 px-4 py-2 text-sm font-bold text-indigo-700">
-          Tổng user hiện tại: {currentUserRecordsCount} record
+      </div>
+
+      <div className="rounded-xl border border-emerald-100 bg-white p-6 shadow-sm">
+        <p className="text-sm font-semibold text-slate-500">
+          Tổng HealthForm đã nhập
+        </p>
+        <div className="mt-3 flex items-end gap-2">
+          <span className="text-3xl font-bold tracking-tight text-emerald-700">
+            {totalRecordsCount}
+          </span>
+          <span className="pb-1 text-sm font-semibold text-slate-500">
+            record
+          </span>
         </div>
       </div>
     </section>
