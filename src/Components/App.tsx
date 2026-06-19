@@ -29,7 +29,10 @@ function App() {
           <Routes>
             <Route element={<PrivateRoutes />}>
               <Route element={<Dashboard />} path="/" />
-              <Route element={<DocumentDetail />} path="/document/:documentId" />
+              <Route
+                element={<DocumentDetail />}
+                path="/document/:documentId"
+              />
               <Route element={<Files />} path="/files" />
               <Route element={<FileDetail />} path="/file/:fileId" />
               <Route element={<HealthForm />} path="/health-form" />
