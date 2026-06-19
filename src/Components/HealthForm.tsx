@@ -115,7 +115,11 @@ const baseFormFields: HealthFormField[] = [
     component: 'select',
     options: ['TH', 'THCS', 'THPT', 'CĐ/ĐH', 'Sau ĐH'],
   },
-  { name: 'para', label: 'PARA', placeholder: 'Ví dụ 3-0-0-3' },
+  {
+    name: 'para',
+    label: 'PARA',
+    placeholder: 'Ví dụ 3-0-0-3, chỉ cần nhập 3003',
+  },
   { name: 'firstSexAge', label: 'Tuổi QHTD đầu tiên' },
   {
     name: 'relationshipStatus',
@@ -188,7 +192,13 @@ const baseFormFields: HealthFormField[] = [
       'Polyp CTC',
       'U xơ tử cung',
       'Lạc nội mạc TC',
+      'Khác',
     ],
+  },
+  {
+    name: 'otherGynecologicalDisease',
+    label: 'Bệnh phụ khoa khác',
+    placeholder: 'Nhập tên bệnh phụ khoa',
   },
   {
     name: 'underlyingDisease',
@@ -254,6 +264,11 @@ const baseFormFields: HealthFormField[] = [
     options: ['Không', 'Có'],
   },
   {
+    name: 'familyCervicalCancerDetail',
+    label: 'Chi tiết GĐ mắc UT CTC',
+    placeholder: 'Nhập thông tin người thân mắc UT CTC',
+  },
+  {
     name: 'currentSymptoms',
     label: 'Triệu chứng hiện tại',
     component: 'select',
@@ -295,6 +310,84 @@ const formFields: HealthFormField[] = baseFormFields.map((field) => ({
     field.name
   ),
 }))
+
+const defaultHealthFormValues: HealthFormValues = {
+  ethnicity: 'Kinh',
+  relationshipStatus: 'Một bạn đời',
+  contraception: 'Không',
+  hpvVaccinated: 'Chưa tiêm',
+  cervicalCancerScreened: 'Chưa bao giờ',
+  gynecologicalDisease: 'Không',
+  underlyingDisease: 'Không',
+  smoking: 'Không',
+  alcohol: 'Không',
+  hivStatus: 'Âm tính',
+  immunosuppressant: 'Không',
+  exercise: 'Không',
+  swimming: 'Không',
+  familyCervicalCancer: 'Không',
+  currentSymptoms: 'Không',
+  aiResult: 'Bình thường',
+  treatmentPlan: 'Tái khám sau 1 năm',
+}
+
+const otherFieldMappings = [
+  {
+    mainField: 'contraception',
+    otherField: 'otherContraception',
+    triggerValue: 'Khác',
+  },
+  {
+    mainField: 'screeningMethod',
+    otherField: 'otherScreeningMethod',
+    triggerValue: 'Khác',
+  },
+  {
+    mainField: 'gynecologicalDisease',
+    otherField: 'otherGynecologicalDisease',
+    triggerValue: 'Khác',
+  },
+  {
+    mainField: 'underlyingDisease',
+    otherField: 'otherUnderlyingDisease',
+    triggerValue: 'Khác',
+  },
+  {
+    mainField: 'immunosuppressant',
+    otherField: 'immunosuppressantDrugName',
+    triggerValue: 'Có',
+  },
+  {
+    mainField: 'familyCervicalCancer',
+    otherField: 'familyCervicalCancerDetail',
+    triggerValue: 'Có',
+  },
+]
+
+function splitOtherFieldValue(value: string, triggerValue: string) {
+  const [prefix, ...remainingParts] = value.split(':')
+  const otherValue = remainingParts.join(':').trim()
+
+  if (prefix.trim() !== triggerValue || !otherValue) {
+    return null
+  }
+
+  return {
+    mainValue: triggerValue,
+    otherValue,
+  }
+}
+
+function normalizeParaValue(value?: string) {
+  const trimmedValue = value?.trim() || ''
+  const digitsOnly = trimmedValue.replace(/\D/g, '')
+
+  if (!digitsOnly) {
+    return '0-0-0-0'
+  }
+
+  return digitsOnly.slice(0, 4).split('').join('-')
+}
 
 function FieldInput({
   field,
@@ -371,25 +464,7 @@ export default function HealthForm() {
     watch,
     formState: { errors },
   } = useForm<HealthFormValues>({
-    defaultValues: {
-      ethnicity: 'Kinh',
-      relationshipStatus: 'Một bạn đời',
-      contraception: 'Không',
-      hpvVaccinated: 'Chưa tiêm',
-      cervicalCancerScreened: 'Chưa bao giờ',
-      gynecologicalDisease: 'Không',
-      underlyingDisease: 'Không',
-      smoking: 'Không',
-      alcohol: 'Không',
-      hivStatus: 'Âm tính',
-      immunosuppressant: 'Không',
-      exercise: 'Không',
-      swimming: 'Không',
-      familyCervicalCancer: 'Không',
-      currentSymptoms: 'Không',
-      aiResult: 'Bình thường',
-      treatmentPlan: 'Tái khám sau 1 năm',
-    },
+    defaultValues: defaultHealthFormValues,
   })
 
   useEffect(() => {
@@ -401,6 +476,18 @@ export default function HealthForm() {
         typeof value === 'string' ? value : String(value ?? '')
       return result
     }, {})
+
+    otherFieldMappings.forEach(({ mainField, otherField, triggerValue }) => {
+      const splitValue = splitOtherFieldValue(
+        formValues[mainField] || '',
+        triggerValue
+      )
+
+      if (!splitValue) return
+
+      formValues[mainField] = splitValue.mainValue
+      formValues[otherField] = splitValue.otherValue
+    })
 
     reset(formValues)
   }, [isUpdateMode, reset, updatingRecord])
@@ -422,9 +509,11 @@ export default function HealthForm() {
   const hpvVaccinated = watch('hpvVaccinated')
   const cervicalCancerScreened = watch('cervicalCancerScreened')
   const screeningMethod = watch('screeningMethod')
+  const gynecologicalDisease = watch('gynecologicalDisease')
   const underlyingDisease = watch('underlyingDisease')
   const smoking = watch('smoking')
   const immunosuppressant = watch('immunosuppressant')
+  const familyCervicalCancer = watch('familyCervicalCancer')
 
   useEffect(() => {
     if (contraception !== 'Thuốc uống') {
@@ -458,6 +547,12 @@ export default function HealthForm() {
   }, [screeningMethod, setValue])
 
   useEffect(() => {
+    if (gynecologicalDisease !== 'Khác') {
+      setValue('otherGynecologicalDisease', '')
+    }
+  }, [gynecologicalDisease, setValue])
+
+  useEffect(() => {
     if (underlyingDisease !== 'Khác') {
       setValue('otherUnderlyingDisease', '')
     }
@@ -475,6 +570,12 @@ export default function HealthForm() {
     }
   }, [immunosuppressant, setValue])
 
+  useEffect(() => {
+    if (familyCervicalCancer !== 'Có') {
+      setValue('familyCervicalCancerDetail', '')
+    }
+  }, [familyCervicalCancer, setValue])
+
   function shouldHideField(fieldName: string) {
     const shouldHideContraceptionFields =
       contraception !== 'Thuốc uống' && fieldName === 'contraceptionYears'
@@ -491,12 +592,18 @@ export default function HealthForm() {
     const shouldHideOtherScreeningMethod =
       (cervicalCancerScreened !== 'Đã từng' || screeningMethod !== 'Khác') &&
       fieldName === 'otherScreeningMethod'
+    const shouldHideOtherGynecologicalDisease =
+      gynecologicalDisease !== 'Khác' &&
+      fieldName === 'otherGynecologicalDisease'
     const shouldHideOtherUnderlyingDisease =
       underlyingDisease !== 'Khác' && fieldName === 'otherUnderlyingDisease'
     const shouldHideSmokingFields =
       smoking !== 'Đang hút' && fieldName === 'cigarettesPerDay'
     const shouldHideImmunosuppressantFields =
       immunosuppressant !== 'Có' && fieldName === 'immunosuppressantDrugName'
+    const shouldHideFamilyCervicalCancerFields =
+      familyCervicalCancer !== 'Có' &&
+      fieldName === 'familyCervicalCancerDetail'
 
     return (
       shouldHideContraceptionFields ||
@@ -504,10 +611,34 @@ export default function HealthForm() {
       shouldHideHpvFields ||
       shouldHideScreeningFields ||
       shouldHideOtherScreeningMethod ||
+      shouldHideOtherGynecologicalDisease ||
       shouldHideOtherUnderlyingDisease ||
       shouldHideSmokingFields ||
-      shouldHideImmunosuppressantFields
+      shouldHideImmunosuppressantFields ||
+      shouldHideFamilyCervicalCancerFields
     )
+  }
+
+  function getSavedHealthFormValues(values: HealthFormValues) {
+    const savedValues = formFields
+      .filter((field) => field.saveData)
+      .reduce<HealthFormValues>((result, field) => {
+        result[field.name] = values[field.name] || ''
+        return result
+      }, {})
+
+    savedValues.para = normalizeParaValue(values.para)
+    savedValues.fullName = values.fullName?.trim().toUpperCase() || ''
+
+    otherFieldMappings.forEach(({ mainField, otherField, triggerValue }) => {
+      const otherValue = values[otherField]?.trim()
+
+      if (values[mainField] !== triggerValue || !otherValue) return
+
+      savedValues[mainField] = `${triggerValue}: ${otherValue}`
+    })
+
+    return savedValues
   }
 
   async function saveHealthForm(values: HealthFormValues) {
@@ -515,12 +646,7 @@ export default function HealthForm() {
       throw new Error('User is not authenticated')
     }
 
-    const savedValues = formFields
-      .filter((field) => field.saveData)
-      .reduce<HealthFormValues>((result, field) => {
-        result[field.name] = values[field.name] || ''
-        return result
-      }, {})
+    const savedValues = getSavedHealthFormValues(values)
 
     await addHealthFormRecord({
       ...savedValues,
@@ -564,7 +690,7 @@ export default function HealthForm() {
 
       await saveHealthForm(values)
       showTypedToast(EToastTypes.SUCCESS, 'Đã lưu thông tin sức khỏe')
-      reset()
+      resetNewFormKeepingExamInfo(values)
     } catch (error) {
       showError(
         'Không thêm được thông tin vào cơ sở dữ liệu. Vui lòng thử lại.'
@@ -583,7 +709,7 @@ export default function HealthForm() {
       await saveHealthForm(pendingDuplicateSave.values)
       showTypedToast(EToastTypes.SUCCESS, 'Đã lưu thông tin sức khỏe')
       setPendingDuplicateSave(null)
-      reset()
+      resetNewFormKeepingExamInfo(pendingDuplicateSave.values)
     } catch (error) {
       showError(
         'Không thêm được thông tin vào cơ sở dữ liệu. Vui lòng thử lại.'
@@ -597,14 +723,17 @@ export default function HealthForm() {
     recordId: string,
     values: HealthFormValues
   ) {
-    const savedValues = formFields
-      .filter((field) => field.saveData)
-      .reduce<HealthFormValues>((result, field) => {
-        result[field.name] = values[field.name] || ''
-        return result
-      }, {})
+    const savedValues = getSavedHealthFormValues(values)
 
     await updateHealthFormRecord(recordId, savedValues)
+  }
+
+  function resetNewFormKeepingExamInfo(values: HealthFormValues) {
+    reset({
+      ...defaultHealthFormValues,
+      clinicLocation: values.clinicLocation,
+      examDate: values.examDate,
+    })
   }
 
   if (isLoadingUpdatingRecord) {
@@ -623,21 +752,6 @@ export default function HealthForm() {
         onSubmit={handleSubmit(onSubmit)}
         className="mx-auto max-w-7xl space-y-6"
       >
-        <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-            <div>
-              <h1 className="text-2xl font-bold tracking-tight text-slate-900">
-                {isUpdateMode ? 'Cập nhật form sức khỏe' : 'Form sức khỏe'}
-              </h1>
-              <p className="mt-1 text-sm text-slate-500">
-                {isUpdateMode
-                  ? 'Chỉnh sửa thông tin khám, tiền sử và hướng xử trí của bệnh nhân.'
-                  : 'Nhập thông tin khám, tiền sử và hướng xử trí của bệnh nhân.'}
-              </p>
-            </div>
-          </div>
-        </section>
-
         <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
           <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
             {formFields.map((field) =>
