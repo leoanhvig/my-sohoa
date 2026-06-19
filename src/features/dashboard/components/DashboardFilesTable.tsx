@@ -9,6 +9,7 @@ import {
 import { Clock3, Loader2 } from 'lucide-react'
 import { useMemo } from 'react'
 import { DashboardFileActions } from './DashboardFileActions'
+import { DashboardFileStatus } from './DashboardFileStatus'
 
 interface DashboardFilesTableProps {
   files: DashboardFile[]
@@ -52,6 +53,16 @@ export function DashboardFilesTable({
           <span className="font-semibold text-slate-700">
             {row.original.relative_path || row.original.file_name}
           </span>
+        ),
+      },
+      {
+        id: 'status',
+        header: 'Trạng thái',
+        cell: ({ row }) => (
+          <DashboardFileStatus
+            isUnassigned={row.original.isUnassigned}
+            isCompleted={row.original.is_completed}
+          />
         ),
       },
       {

@@ -2,27 +2,22 @@ import { getDocumentByUid } from '@/apis/document'
 import { DocumentDetailHeader } from '@/features/document-detail/components/DocumentDetailHeader'
 import { DocumentPreviewPane } from '@/features/document-detail/components/DocumentPreviewPane'
 import { DocumentRecordPanel } from '@/features/document-detail/components/DocumentRecordPanel'
-import { defaultRecordFormValues } from '@/features/document-detail/constants'
+import { useCreateDocumentInfo } from '@/features/document-detail/hooks/useCreateDocumentInfo'
+import { useDocumentDetails } from '@/features/document-detail/hooks/useDocumentDetails'
+import { useMarkDocumentDone } from '@/features/document-detail/hooks/useMarkDocumentDone'
 import type { DocumentRecordFormValues } from '@/features/document-detail/types'
 import { getPreviewUrl } from '@/features/document-detail/utils'
 import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
-import { useForm } from 'react-hook-form'
 import { useNavigate, useParams } from 'react-router-dom'
 
 export default function DocumentDetail() {
   const { documentId } = useParams<{ documentId: string }>()
   const navigate = useNavigate()
-  const [isRecordFormOpen, setIsRecordFormOpen] = useState(false)
   const [recordFormKey, setRecordFormKey] = useState(0)
-  const {
-    handleSubmit,
-    register,
-    reset,
-    formState: { errors },
-  } = useForm<DocumentRecordFormValues>({
-    defaultValues: defaultRecordFormValues,
-  })
+  const { createDocumentInfo, isCreatingDocumentInfo } = useCreateDocumentInfo()
+  const { markDocumentDone, isMarkingDocumentDone } =
+    useMarkDocumentDone(documentId)
   const {
     data: documentRecord,
     isLoading,
@@ -32,19 +27,22 @@ export default function DocumentDetail() {
     queryFn: () => getDocumentByUid(documentId || ''),
     enabled: Boolean(documentId),
   })
+  const { data: documentDetails = [] } = useDocumentDetails(documentId)
 
   const previewUrl = getPreviewUrl(documentRecord)
 
-  function handleApprove(values: DocumentRecordFormValues) {
-    console.log('Document record form values:', values)
-    window.alert('Chức năng lưu & duyệt sẽ được kết nối sau.')
-    reset(defaultRecordFormValues)
-    setIsRecordFormOpen(false)
+  async function handleApprove(values: DocumentRecordFormValues) {
+    if (!documentRecord) return
+
+    await createDocumentInfo({ documentRecord, values })
+    setRecordFormKey((key) => key + 1)
   }
 
-  function handleOpenRecordForm() {
-    setRecordFormKey((key) => key + 1)
-    setIsRecordFormOpen(true)
+  async function handleApproveAndMarkDone(values: DocumentRecordFormValues) {
+    if (!documentRecord) return
+
+    await createDocumentInfo({ documentRecord, values })
+    await markDocumentDone()
   }
 
   return (
@@ -62,14 +60,13 @@ export default function DocumentDetail() {
           error={error}
         />
         <DocumentRecordPanel
-          isOpen={isRecordFormOpen}
           formKey={recordFormKey}
-          errors={errors}
-          register={register}
-          handleSubmit={handleSubmit}
           onApprove={handleApprove}
-          onOpenForm={handleOpenRecordForm}
-          reset={reset}
+          onApproveAndMarkDone={handleApproveAndMarkDone}
+          isSaving={isCreatingDocumentInfo}
+          documentDetails={documentDetails}
+          onMarkDocumentDone={markDocumentDone}
+          isMarkingDocumentDone={isMarkingDocumentDone}
         />
       </div>
     </main>

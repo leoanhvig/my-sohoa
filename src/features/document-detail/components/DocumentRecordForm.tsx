@@ -1,82 +1,48 @@
-import { Button } from '@/Components/ui/button'
-import { CheckCircle2 } from 'lucide-react'
-import type {
-  FieldErrors,
-  UseFormHandleSubmit,
-  UseFormRegister,
-} from 'react-hook-form'
+import { useEffect, useState } from 'react'
+import { defaultRecordFormValues } from '../constants'
 import type { DocumentRecordFormValues } from '../types'
-import { FieldInput, FieldTextarea } from './DocumentRecordFormFields'
+import { DocumentDetailForm } from './DocumentDetailForm'
 
 type DocumentRecordFormProps = {
   formKey: number
-  errors: FieldErrors<DocumentRecordFormValues>
-  register: UseFormRegister<DocumentRecordFormValues>
-  handleSubmit: UseFormHandleSubmit<DocumentRecordFormValues>
-  onApprove: (values: DocumentRecordFormValues) => void
+  onApprove: (values: DocumentRecordFormValues) => void | Promise<void>
+  onApproveAndMarkDone: (
+    values: DocumentRecordFormValues
+  ) => void | Promise<void>
+  isSaving: boolean
 }
 
 export function DocumentRecordForm({
   formKey,
-  errors,
-  register,
-  handleSubmit,
   onApprove,
+  onApproveAndMarkDone,
+  isSaving,
 }: DocumentRecordFormProps) {
-  return (
-    <form
-      key={formKey}
-      className="space-y-5"
-      onSubmit={handleSubmit(onApprove)}
-    >
-      <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-        <div className="space-y-4">
-          <FieldInput
-            label="Tác giả"
-            error={errors.tacGia?.message}
-            registration={register('tacGia')}
-          />
-          <FieldInput
-            label="Tờ số/trang số"
-            required
-            error={errors.soTo?.message}
-            registration={register('soTo', {
-              required: 'Tờ số/trang số là bắt buộc',
-            })}
-          />
-          <FieldInput
-            label="Số, ký hiệu văn bản"
-            error={errors.soKyHieu?.message}
-            registration={register('soKyHieu')}
-          />
-          <FieldInput
-            label="Ngày, tháng, năm tài liệu"
-            placeholder="dd/mm/yyyy, mm/yyyy hoặc yyyy"
-            error={errors.ngayThang?.message}
-            registration={register('ngayThang')}
-          />
-          <FieldTextarea
-            label="Trích yếu nội dung"
-            error={errors.trichYeu?.message}
-            registration={register('trichYeu')}
-          />
-        </div>
-      </div>
+  const [values, setValues] = useState<DocumentRecordFormValues>(
+    defaultRecordFormValues
+  )
 
-      <div className="flex gap-3 pb-4">
-        <Button
-          type="button"
-          className="h-11 flex-1 bg-emerald-600 font-bold shadow hover:bg-emerald-700"
-        >
-          <CheckCircle2 className="mr-2 h-5 w-5" /> lưu và chuyển trang
-        </Button>
-        <Button
-          type="submit"
-          className="h-11 flex-1 bg-emerald-600 font-bold shadow hover:bg-emerald-700"
-        >
-          <CheckCircle2 className="mr-2 h-5 w-5" /> lưu và thêm 1 dòng mới
-        </Button>
-      </div>
-    </form>
+  useEffect(() => {
+    setValues(defaultRecordFormValues)
+  }, [formKey])
+
+  async function handleSubmit() {
+    await onApprove(values)
+  }
+
+  async function handleSecondarySubmit() {
+    await onApproveAndMarkDone(values)
+  }
+
+  return (
+    <div key={formKey} className="space-y-5">
+      <DocumentDetailForm
+        values={values}
+        onChange={setValues}
+        onSubmit={handleSubmit}
+        isSubmitting={isSaving}
+        onSecondaryClick={handleSecondarySubmit}
+      />
+    </div>
   )
 }

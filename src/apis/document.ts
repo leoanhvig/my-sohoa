@@ -1,4 +1,5 @@
 import {
+  addDoc,
   collection,
   doc,
   getDoc,
@@ -23,7 +24,136 @@ export type {
 } from '../interfaces/document'
 
 const DOCUMENTS_COLLECTION = 'Documents'
+const DOCUMENT_INFOS_COLLECTION = 'DocumentDetails'
 const RANDOM_CLAIM_CANDIDATE_LIMIT = 10
+
+export type CreateDocumentInfoParams = {
+  documentUid: string
+  uidFile?: string
+  fileName?: string
+  relativePath?: string
+  creator: string
+  soKyHieu: string
+  ngayThang: string
+  tacGia: string
+  trichYeu: string
+  soTo: string
+}
+
+export type DocumentInfoRecord = CreateDocumentInfoParams & {
+  uid: string
+  created_at?: unknown
+  updated_at?: unknown
+}
+
+export type UpdateDocumentInfoParams = Pick<
+  DocumentInfoRecord,
+  | 'uid'
+  | 'documentUid'
+  | 'soKyHieu'
+  | 'ngayThang'
+  | 'tacGia'
+  | 'trichYeu'
+  | 'soTo'
+>
+
+export async function createDocumentInfoRecord({
+  documentUid,
+  uidFile = '',
+  fileName = '',
+  relativePath = '',
+  creator,
+  soKyHieu,
+  ngayThang,
+  tacGia,
+  trichYeu,
+  soTo,
+}: CreateDocumentInfoParams): Promise<string> {
+  const document = await addDoc(collection(db, DOCUMENT_INFOS_COLLECTION), {
+    documentUid,
+    uidFile,
+    fileName,
+    relativePath,
+    creator,
+    soKyHieu,
+    ngayThang,
+    tacGia,
+    trichYeu,
+    soTo,
+    created_at: serverTimestamp(),
+    updated_at: serverTimestamp(),
+  })
+
+  return document.id
+}
+
+export async function getDocumentInfosByDocumentUid(
+  documentUid: string
+): Promise<DocumentInfoRecord[]> {
+  if (!documentUid) {
+    return []
+  }
+
+  const documentDetailsCollection = collection(db, DOCUMENT_INFOS_COLLECTION)
+  const documentDetailsQuery = query(
+    documentDetailsCollection,
+    where('documentUid', '==', documentUid)
+  )
+  const snapshot = await getDocs(documentDetailsQuery)
+
+  return snapshot.docs.map((document) => ({
+    uid: document.id,
+    ...(document.data() as CreateDocumentInfoParams),
+  }))
+}
+
+export async function getDocumentDetailsCountByCreator(
+  creator: string
+): Promise<number> {
+  if (!creator) {
+    return 0
+  }
+
+  const documentDetailsCollection = collection(db, DOCUMENT_INFOS_COLLECTION)
+  const documentDetailsQuery = query(
+    documentDetailsCollection,
+    where('creator', '==', creator)
+  )
+  const snapshot = await getDocs(documentDetailsQuery)
+
+  return snapshot.size
+}
+
+export async function updateDocumentInfoRecord({
+  uid,
+  documentUid,
+  soKyHieu,
+  ngayThang,
+  tacGia,
+  trichYeu,
+  soTo,
+}: UpdateDocumentInfoParams): Promise<void> {
+  const documentDetailRef = doc(db, DOCUMENT_INFOS_COLLECTION, uid)
+
+  await updateDoc(documentDetailRef, {
+    documentUid,
+    soKyHieu,
+    ngayThang,
+    tacGia,
+    trichYeu,
+    soTo,
+    updated_at: serverTimestamp(),
+  })
+}
+
+export async function markDocumentAsDone(documentUid: string): Promise<void> {
+  const documentRef = doc(db, DOCUMENTS_COLLECTION, documentUid)
+
+  await updateDoc(documentRef, {
+    is_completed: true,
+    updated_at: serverTimestamp(),
+  })
+}
 
 export async function createDocumentRecord({
   uid_file,
@@ -161,6 +291,22 @@ export async function getEnteredDocumentsCountByUser(
   const snapshot = await getDocs(documentsQuery)
 
   return snapshot.size
+}
+
+export async function getUncompletedDocumentsByEnteredUser(
+  userUid: string
+): Promise<DocumentRecord[]> {
+  const documents = await getDocumentsByEnteredUser(userUid)
+
+  return documents.filter((document) => !document.is_completed)
+}
+
+export async function getUncompletedDocumentsCountByEnteredUser(
+  userUid: string
+): Promise<number> {
+  const documents = await getUncompletedDocumentsByEnteredUser(userUid)
+
+  return documents.length
 }
 
 export async function claimDocumentRecord({
