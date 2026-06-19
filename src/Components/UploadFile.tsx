@@ -9,12 +9,9 @@ import { useUserStore } from '../stores/userStore'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
 
-const EXAMPLE_DRIVE_FOLDER_URL =
-  'https://drive.google.com/drive/folders/1XIEoO8HJBbr1jzgHOlaxzC69Oq0Yrj_y?usp=sharing'
-
 export default function UploadFile() {
   const authUser = useUserStore((state) => state.authUser)
-  const [folderUrl, setFolderUrl] = useState(EXAMPLE_DRIVE_FOLDER_URL)
+  const [folderUrl, setFolderUrl] = useState('')
   const [folderName, setFolderName] = useState('')
   const [syncing, setSyncing] = useState(false)
   const [error, setError] = useState('')

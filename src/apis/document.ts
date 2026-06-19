@@ -5,58 +5,25 @@ import {
   query,
   serverTimestamp,
   setDoc,
+  updateDoc,
   where,
 } from 'firebase/firestore'
 import { db } from '../firebase'
+import type {
+  CreateDocumentRecordParams,
+  DocumentRecord,
+} from '../interfaces/document'
 
-export interface CreateDocumentRecordParams {
-  uid_file: string
-  so_ky_hieu?: string
-  ngay_thang?: string
-  tac_gia?: string
-  trich_yeu?: string
-  so_to?: number
-  file_name: string
-  relative_path?: string
-  storage_path?: string
-  download_url?: string
-  drive_file_id?: string
-  drive_folder_id?: string
-  drive_mime_type?: string
-  drive_size?: string
-  drive_web_view_link?: string
-  drive_download_link?: string
-  storage_provider?: 'firebase_storage' | 'google_drive'
-}
-
-export interface DocumentRecord {
-  uid: string
-  uid_file: string
-  so_ky_hieu: string
-  ngay_thang: string
-  tac_gia: string
-  trich_yeu: string
-  so_to: number
-  file_name: string
-  relative_path: string
-  storage_path: string
-  download_url: string
-  drive_file_id: string
-  drive_folder_id: string
-  drive_mime_type: string
-  drive_size: string
-  drive_web_view_link: string
-  drive_download_link: string
-  storage_provider: 'firebase_storage' | 'google_drive'
-  is_completed?: boolean
-  created_at: ReturnType<typeof serverTimestamp>
-  updated_at: ReturnType<typeof serverTimestamp>
-}
+export type {
+  CreateDocumentRecordParams,
+  DocumentRecord,
+} from '../interfaces/document'
 
 const DOCUMENTS_COLLECTION = 'Documents'
 
 export async function createDocumentRecord({
   uid_file,
+  enteredByUserId = '',
   so_ky_hieu = '',
   ngay_thang = '',
   tac_gia = '',
@@ -79,6 +46,7 @@ export async function createDocumentRecord({
   const documentRecord: DocumentRecord = {
     uid: documentRef.id,
     uid_file,
+    enteredByUserId,
     so_ky_hieu,
     ngay_thang,
     tac_gia,
@@ -115,6 +83,78 @@ export async function getDocumentsByUidFile(
   const snapshot = await getDocs(documentsQuery)
 
   return snapshot.docs.map((document) => document.data() as DocumentRecord)
+}
+
+export async function getUnenteredDocuments(): Promise<DocumentRecord[]> {
+  const documentsCollection = collection(db, DOCUMENTS_COLLECTION)
+  const documentsQuery = query(
+    documentsCollection,
+    where('enteredByUserId', '==', '')
+  )
+  const snapshot = await getDocs(documentsQuery)
+
+  return snapshot.docs.map((document) => document.data() as DocumentRecord)
+}
+
+export async function getDocumentsByEnteredUser(
+  userUid: string
+): Promise<DocumentRecord[]> {
+  if (!userUid) {
+    return []
+  }
+
+  const documentsCollection = collection(db, DOCUMENTS_COLLECTION)
+  const documentsQuery = query(
+    documentsCollection,
+    where('enteredByUserId', '==', userUid)
+  )
+  const snapshot = await getDocs(documentsQuery)
+
+  return snapshot.docs.map((document) => document.data() as DocumentRecord)
+}
+
+export async function getUnenteredDocumentsCount(): Promise<number> {
+  const documents = await getUnenteredDocuments()
+
+  return documents.length
+}
+
+export async function getDocumentsCount(): Promise<number> {
+  const snapshot = await getDocs(collection(db, DOCUMENTS_COLLECTION))
+
+  return snapshot.size
+}
+
+export async function getEnteredDocumentsCountByUser(
+  userUid: string
+): Promise<number> {
+  if (!userUid) {
+    return 0
+  }
+
+  const documentsCollection = collection(db, DOCUMENTS_COLLECTION)
+  const documentsQuery = query(
+    documentsCollection,
+    where('enteredByUserId', '==', userUid)
+  )
+  const snapshot = await getDocs(documentsQuery)
+
+  return snapshot.size
+}
+
+export async function claimDocumentRecord({
+  documentUid,
+  userUid,
+}: {
+  documentUid: string
+  userUid: string
+}): Promise<void> {
+  const documentRef = doc(db, DOCUMENTS_COLLECTION, documentUid)
+
+  await updateDoc(documentRef, {
+    enteredByUserId: userUid,
+    updated_at: serverTimestamp(),
+  })
 }
 
 function isDocumentCompleted(document: DocumentRecord): boolean {

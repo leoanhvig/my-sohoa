@@ -1,9 +1,9 @@
 import { useQuery } from '@tanstack/react-query'
-import { getUnassignedFilesCount } from '../apis/file'
+import { getUnenteredDocumentsCount } from '../apis/document'
 
 export function useUnassignedFilesCount() {
   return useQuery({
-    queryKey: ['files', 'unassigned-count'],
-    queryFn: getUnassignedFilesCount,
+    queryKey: ['documents', 'unentered-count'],
+    queryFn: getUnenteredDocumentsCount,
   })
 }

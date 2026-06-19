@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
-import { getCompletedDocumentCountByUidFile } from '../apis/document'
-import { DashboardFileRecord, getDashboardFilesByUser } from '../apis/file'
+import { DocumentRecord, getDocumentsByEnteredUser } from '../apis/document'
 
-export interface DashboardFile extends DashboardFileRecord {
+export interface DashboardFile extends DocumentRecord {
   isClaimedByCurrentUser: boolean
   isUnassigned: boolean
 }
@@ -22,17 +21,12 @@ export function useDashboardFiles(userUid?: string) {
       setLoading(true)
       setError('')
 
-      const fileRecords = await getDashboardFilesByUser(userUid)
-      const filesWithCompletedCount = await Promise.all(
-        fileRecords.map(async (file) => ({
-          ...file,
-          completed_file_count: await getCompletedDocumentCountByUidFile(
-            file.uid
-          ),
-          isClaimedByCurrentUser: file.updated_uid === userUid,
-          isUnassigned: !file.updated_uid,
-        }))
-      )
+      const documentRecords = await getDocumentsByEnteredUser(userUid)
+      const filesWithCompletedCount = documentRecords.map((document) => ({
+        ...document,
+        isClaimedByCurrentUser: document.enteredByUserId === userUid,
+        isUnassigned: !document.enteredByUserId,
+      }))
 
       setFiles(filesWithCompletedCount)
     } catch (err) {

@@ -133,11 +133,6 @@ async function createDocumentFromDriveFile({
   await documentRef.set({
     uid: documentRef.id,
     uid_file: uidFile,
-    so_ky_hieu: '',
-    ngay_thang: '',
-    tac_gia: '',
-    trich_yeu: '',
-    so_to: 0,
     file_name: file.name,
     relative_path: relativePath,
     storage_path: file.id,
@@ -153,6 +148,7 @@ async function createDocumentFromDriveFile({
     storage_provider: 'google_drive',
     created_at: serverTimestamp(),
     updated_at: serverTimestamp(),
+    enteredByUserId: '',
   })
 }
 
