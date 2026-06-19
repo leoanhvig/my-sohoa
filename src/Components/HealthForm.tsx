@@ -20,7 +20,8 @@ import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { useNavigate, useParams } from 'react-router-dom'
 
-type HealthFormValues = Record<string, string>
+type HealthFormValue = string | string[]
+type HealthFormValues = Record<string, HealthFormValue>
 
 type HealthFormField = {
   name: string
@@ -28,6 +29,7 @@ type HealthFormField = {
   component?: 'input' | 'select' | 'textarea'
   placeholder?: string
   options?: string[]
+  multiple?: boolean
   saveData?: boolean
   required?: boolean
 }
@@ -52,7 +54,7 @@ const savedFieldLabels = [
   'Phường/xã',
   'Tỉnh/TP',
   'Đơn vị công tác',
-  'Chi tiết',
+  'Học vấn',
   'Trình độ',
   'PARA',
   'Tuổi QHTD đầu tiên',
@@ -81,7 +83,6 @@ const savedFieldLabels = [
 ]
 
 const baseFormFields: HealthFormField[] = [
-  { name: 'patientCode', label: 'STT/Mã bệnh nhân' },
   {
     name: 'clinicLocation',
     label: 'Địa điểm khám',
@@ -96,11 +97,12 @@ const baseFormFields: HealthFormField[] = [
     name: 'examDate',
     label: 'Ngày khám',
     component: 'select',
-    options: ['09/05/2026', '10/05/2026', '16/05/2026', '17/05/2026'],
+    options: ['9/5/26', '10/5/26', '16/5/26', '17/5/26'],
   },
+  { name: 'patientCode', label: 'STT/Mã bệnh nhân' },
   { name: 'fullName', label: 'Họ và Tên' },
   { name: 'birthYear', label: 'Năm sinh' },
-  { name: 'age', label: 'Tuổi' },
+  // { name: 'age', label: 'Tuổi' },
   { name: 'phoneNumber', label: 'Số điện thoại' },
   { name: 'height', label: 'Chiều cao', placeholder: 'cm' },
   { name: 'weight', label: 'Cân nặng', placeholder: 'kg' },
@@ -168,6 +170,7 @@ const baseFormFields: HealthFormField[] = [
     name: 'screeningMethod',
     label: 'Phương pháp đã làm',
     component: 'select',
+    multiple: true,
     options: ['Pap smear', 'HPV test', 'VIA', 'Khác'],
   },
   {
@@ -312,8 +315,8 @@ const formFields: HealthFormField[] = baseFormFields.map((field) => ({
 }))
 
 const defaultHealthFormValues: HealthFormValues = {
-  ethnicity: 'Kinh',
-  relationshipStatus: 'Một bạn đời',
+  ethnicity: '',
+  relationshipStatus: '',
   contraception: 'Không',
   hpvVaccinated: 'Chưa tiêm',
   cervicalCancerScreened: 'Chưa bao giờ',
@@ -378,6 +381,41 @@ function splitOtherFieldValue(value: string, triggerValue: string) {
   }
 }
 
+function getStringValue(value: HealthFormValue | undefined) {
+  return Array.isArray(value) ? value.join(', ') : value || ''
+}
+
+function includesValue(value: HealthFormValue | undefined, option: string) {
+  return Array.isArray(value) ? value.includes(option) : value === option
+}
+
+function getMultiSelectValue(value: HealthFormValue | undefined) {
+  if (Array.isArray(value)) return value
+
+  return value
+    ? value
+        .split(',')
+        .map((item) => item.trim())
+        .map((item) => (item.startsWith('Khác:') ? 'Khác' : item))
+        .filter(Boolean)
+    : []
+}
+
+function splitMultiSelectOtherValue(value: HealthFormValue | undefined) {
+  const values = getStringValue(value)
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean)
+  const otherItem = values.find((item) => item.startsWith('Khác:'))
+
+  return {
+    selectedValues: values.map((item) =>
+      item.startsWith('Khác:') ? 'Khác' : item
+    ),
+    otherValue: otherItem?.replace(/^Khác:\s*/, '').trim() || '',
+  }
+}
+
 function normalizeParaValue(value?: string) {
   const trimmedValue = value?.trim() || ''
   const digitsOnly = trimmedValue.replace(/\D/g, '')
@@ -389,12 +427,26 @@ function normalizeParaValue(value?: string) {
   return digitsOnly.slice(0, 4).split('').join('-')
 }
 
+function splitSmokingValue(value: string) {
+  const match = value.match(/^Đang hút:\s*(.*?)\s*(?:điếu\/ngày)?$/i)
+
+  if (!match?.[1]) {
+    return null
+  }
+
+  return match[1].trim()
+}
+
 function FieldInput({
   field,
   register,
+  watch,
+  setValue,
 }: {
   field: HealthFormField
   register: ReturnType<typeof useForm<HealthFormValues>>['register']
+  watch: ReturnType<typeof useForm<HealthFormValues>>['watch']
+  setValue: ReturnType<typeof useForm<HealthFormValues>>['setValue']
 }) {
   const baseClassName =
     'mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm'
@@ -414,6 +466,45 @@ function FieldInput({
   }
 
   if (field.component === 'select') {
+    if (field.multiple) {
+      const selectedValues = watch(field.name)
+      const normalizedSelectedValues = Array.isArray(selectedValues)
+        ? selectedValues
+        : selectedValues
+        ? [selectedValues]
+        : []
+
+      return (
+        <div className="mt-2 grid gap-2 rounded-md border border-slate-300 bg-white p-3 shadow-sm sm:grid-cols-2">
+          {field.options?.map((option) => (
+            <label
+              key={option}
+              className="flex items-center gap-2 text-sm font-medium text-slate-700"
+            >
+              <input
+                type="checkbox"
+                checked={normalizedSelectedValues.includes(option)}
+                onChange={(event) => {
+                  const nextValues = event.target.checked
+                    ? [...normalizedSelectedValues, option]
+                    : normalizedSelectedValues.filter(
+                        (value) => value !== option
+                      )
+
+                  setValue(field.name, nextValues, {
+                    shouldDirty: true,
+                    shouldValidate: true,
+                  })
+                }}
+                className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+              />
+              {option}
+            </label>
+          ))}
+        </div>
+      )
+    }
+
     return (
       <select
         {...register(field.name, registerOptions)}
@@ -479,7 +570,7 @@ export default function HealthForm() {
 
     otherFieldMappings.forEach(({ mainField, otherField, triggerValue }) => {
       const splitValue = splitOtherFieldValue(
-        formValues[mainField] || '',
+        getStringValue(formValues[mainField]),
         triggerValue
       )
 
@@ -488,6 +579,31 @@ export default function HealthForm() {
       formValues[mainField] = splitValue.mainValue
       formValues[otherField] = splitValue.otherValue
     })
+
+    formFields
+      .filter((field) => field.multiple)
+      .forEach((field) => {
+        if (field.name === 'screeningMethod') {
+          const { selectedValues, otherValue } = splitMultiSelectOtherValue(
+            formValues[field.name]
+          )
+
+          formValues[field.name] = selectedValues
+          formValues.otherScreeningMethod = otherValue
+          return
+        }
+
+        formValues[field.name] = getMultiSelectValue(formValues[field.name])
+      })
+
+    const cigarettesPerDay = splitSmokingValue(
+      getStringValue(formValues.smoking)
+    )
+
+    if (cigarettesPerDay) {
+      formValues.smoking = 'Đang hút'
+      formValues.cigarettesPerDay = cigarettesPerDay
+    }
 
     reset(formValues)
   }, [isUpdateMode, reset, updatingRecord])
@@ -532,16 +648,7 @@ export default function HealthForm() {
   }, [hpvVaccinated, setValue])
 
   useEffect(() => {
-    if (cervicalCancerScreened !== 'Đã từng') {
-      setValue('screeningMethod', '')
-      setValue('otherScreeningMethod', '')
-      setValue('screeningResult', '')
-      setValue('screeningYear', '')
-    }
-  }, [cervicalCancerScreened, setValue])
-
-  useEffect(() => {
-    if (screeningMethod !== 'Khác') {
+    if (!includesValue(screeningMethod, 'Khác')) {
       setValue('otherScreeningMethod', '')
     }
   }, [screeningMethod, setValue])
@@ -584,13 +691,8 @@ export default function HealthForm() {
     const shouldHideHpvFields =
       hpvVaccinated !== 'Đã tiêm' &&
       ['hpvVaccineType', 'hpvDoseCount'].includes(fieldName)
-    const shouldHideScreeningFields =
-      cervicalCancerScreened !== 'Đã từng' &&
-      ['screeningMethod', 'screeningResult', 'screeningYear'].includes(
-        fieldName
-      )
     const shouldHideOtherScreeningMethod =
-      (cervicalCancerScreened !== 'Đã từng' || screeningMethod !== 'Khác') &&
+      !includesValue(screeningMethod, 'Khác') &&
       fieldName === 'otherScreeningMethod'
     const shouldHideOtherGynecologicalDisease =
       gynecologicalDisease !== 'Khác' &&
@@ -609,7 +711,6 @@ export default function HealthForm() {
       shouldHideContraceptionFields ||
       shouldHideOtherContraception ||
       shouldHideHpvFields ||
-      shouldHideScreeningFields ||
       shouldHideOtherScreeningMethod ||
       shouldHideOtherGynecologicalDisease ||
       shouldHideOtherUnderlyingDisease ||
@@ -623,20 +724,44 @@ export default function HealthForm() {
     const savedValues = formFields
       .filter((field) => field.saveData)
       .reduce<HealthFormValues>((result, field) => {
-        result[field.name] = values[field.name] || ''
+        result[field.name] = getStringValue(values[field.name])
         return result
       }, {})
 
-    savedValues.para = normalizeParaValue(values.para)
-    savedValues.fullName = values.fullName?.trim().toUpperCase() || ''
+    savedValues.para = normalizeParaValue(getStringValue(values.para))
+    savedValues.fullName = getStringValue(values.fullName).trim().toUpperCase()
 
     otherFieldMappings.forEach(({ mainField, otherField, triggerValue }) => {
-      const otherValue = values[otherField]?.trim()
+      const field = formFields.find((formField) => formField.name === mainField)
 
-      if (values[mainField] !== triggerValue || !otherValue) return
+      if (field?.multiple) return
+
+      const otherValue = getStringValue(values[otherField]).trim()
+
+      if (!includesValue(values[mainField], triggerValue) || !otherValue) return
 
       savedValues[mainField] = `${triggerValue}: ${otherValue}`
     })
+
+    if (Array.isArray(values.screeningMethod)) {
+      const otherScreeningMethod = getStringValue(
+        values.otherScreeningMethod
+      ).trim()
+
+      savedValues.screeningMethod = values.screeningMethod
+        .map((value) =>
+          value === 'Khác' && otherScreeningMethod
+            ? `Khác: ${otherScreeningMethod}`
+            : value
+        )
+        .join(', ')
+    }
+
+    const cigarettesPerDay = getStringValue(values.cigarettesPerDay).trim()
+
+    if (values.smoking === 'Đang hút' && cigarettesPerDay) {
+      savedValues.smoking = `Đang hút: ${cigarettesPerDay} điếu/ngày`
+    }
 
     return savedValues
   }
@@ -673,17 +798,17 @@ export default function HealthForm() {
 
       const duplicateRecord = await findDuplicateHealthFormRecord({
         creator: authUser.uid,
-        patientCode: values.patientCode,
-        fullName: values.fullName,
-        examDate: values.examDate,
-        clinicLocation: values.clinicLocation,
+        patientCode: getStringValue(values.patientCode),
+        fullName: getStringValue(values.fullName),
+        examDate: getStringValue(values.examDate),
+        clinicLocation: getStringValue(values.clinicLocation),
       })
 
       if (duplicateRecord) {
         setPendingDuplicateSave({
           values,
-          patientCode: values.patientCode,
-          fullName: values.fullName,
+          patientCode: getStringValue(values.patientCode),
+          fullName: getStringValue(values.fullName),
         })
         return
       }
@@ -729,10 +854,15 @@ export default function HealthForm() {
   }
 
   function resetNewFormKeepingExamInfo(values: HealthFormValues) {
+    const emptyValues = formFields.reduce<HealthFormValues>((result, field) => {
+      result[field.name] = ''
+      return result
+    }, {})
+
     reset({
-      ...defaultHealthFormValues,
-      clinicLocation: values.clinicLocation,
-      examDate: values.examDate,
+      ...emptyValues,
+      clinicLocation: getStringValue(values.clinicLocation),
+      examDate: getStringValue(values.examDate),
     })
   }
 
@@ -770,7 +900,12 @@ export default function HealthForm() {
                       <span className="text-red-500"> *</span>
                     ) : null}
                   </span>
-                  <FieldInput field={field} register={register} />
+                  <FieldInput
+                    field={field}
+                    register={register}
+                    watch={watch}
+                    setValue={setValue}
+                  />
                   {errors[field.name]?.message ? (
                     <p className="mt-1 text-sm text-red-600">
                       {errors[field.name]?.message}

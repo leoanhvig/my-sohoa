@@ -1,29 +1,53 @@
-import { getAllHealthFormRecords } from '@/apis/healthForm'
+import { getHealthFormRecordsByCreatorAndExamInfo } from '@/apis/healthForm'
 import { EToastTypes, useToast } from '@/contexts/ToastContext'
 import { useState } from 'react'
 import { formatValue, healthFormColumns } from '../utils'
 
 const healthFormExcelHeaders = healthFormColumns.map((column) => column.title)
 
+type ExportHealthFormFilters = {
+  creator: string
+  clinicLocation: string
+  examDate: string
+}
+
 export function useExportHealthFormExcel() {
   const { showError, showTypedToast } = useToast()
   const [isExporting, setIsExporting] = useState(false)
 
-  async function exportAllHealthForms() {
+  async function exportHealthFormsByFilters({
+    creator,
+    clinicLocation,
+    examDate,
+  }: ExportHealthFormFilters) {
+    if (!creator) {
+      showError('Bạn cần đăng nhập trước khi export.')
+      return
+    }
+
+    if (!clinicLocation || !examDate) {
+      showError('Vui lòng chọn địa điểm khám và ngày khám để export.')
+      return
+    }
+
     setIsExporting(true)
 
     try {
-      const [allRecords, XLSX] = await Promise.all([
-        getAllHealthFormRecords(),
+      const [records, XLSX] = await Promise.all([
+        getHealthFormRecordsByCreatorAndExamInfo({
+          creator,
+          clinicLocation,
+          examDate,
+        }),
         import('xlsx'),
       ])
 
-      if (allRecords.length === 0) {
-        showError('Không có dữ liệu HealthForm để export.')
+      if (records.length === 0) {
+        showError('Không có dữ liệu HealthForm theo địa điểm và ngày đã chọn.')
         return
       }
 
-      const rows = allRecords.map((record) =>
+      const rows = records.map((record) =>
         healthFormColumns.map((column) => formatValue(record[column.field]))
       )
       const worksheet = XLSX.utils.aoa_to_sheet([
@@ -35,7 +59,10 @@ export function useExportHealthFormExcel() {
       XLSX.utils.book_append_sheet(workbook, worksheet, 'HealthForm')
       XLSX.writeFile(
         workbook,
-        `healthform-${new Date().toISOString().slice(0, 10)}.xlsx`
+        `healthform-${clinicLocation}-${examDate}.xlsx`.replace(
+          /[\\/:*?"<>|]/g,
+          '-'
+        )
       )
       showTypedToast(EToastTypes.SUCCESS, 'Đã export dữ liệu HealthForm')
     } catch (error) {
@@ -46,7 +73,7 @@ export function useExportHealthFormExcel() {
   }
 
   return {
-    exportAllHealthForms,
+    exportHealthFormsByFilters,
     isExporting,
   }
 }

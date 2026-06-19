@@ -1,8 +1,11 @@
 import {
   collection,
   doc,
+  getDoc,
   getDocs,
+  limit,
   query,
+  runTransaction,
   serverTimestamp,
   setDoc,
   updateDoc,
@@ -20,6 +23,7 @@ export type {
 } from '../interfaces/document'
 
 const DOCUMENTS_COLLECTION = 'Documents'
+const RANDOM_CLAIM_CANDIDATE_LIMIT = 10
 
 export async function createDocumentRecord({
   uid_file,
@@ -83,6 +87,23 @@ export async function getDocumentsByUidFile(
   const snapshot = await getDocs(documentsQuery)
 
   return snapshot.docs.map((document) => document.data() as DocumentRecord)
+}
+
+export async function getDocumentByUid(
+  documentUid: string
+): Promise<DocumentRecord | null> {
+  if (!documentUid) {
+    return null
+  }
+
+  const documentRef = doc(db, DOCUMENTS_COLLECTION, documentUid)
+  const snapshot = await getDoc(documentRef)
+
+  if (!snapshot.exists()) {
+    return null
+  }
+
+  return snapshot.data() as DocumentRecord
 }
 
 export async function getUnenteredDocuments(): Promise<DocumentRecord[]> {
@@ -155,6 +176,57 @@ export async function claimDocumentRecord({
     enteredByUserId: userUid,
     updated_at: serverTimestamp(),
   })
+}
+
+export async function claimRandomUnenteredDocument(
+  userUid: string
+): Promise<DocumentRecord | null> {
+  if (!userUid) {
+    return null
+  }
+
+  const documentsCollection = collection(db, DOCUMENTS_COLLECTION)
+  const documentsQuery = query(
+    documentsCollection,
+    where('enteredByUserId', '==', ''),
+    limit(RANDOM_CLAIM_CANDIDATE_LIMIT)
+  )
+  const snapshot = await getDocs(documentsQuery)
+  const candidateDocs = snapshot.docs.sort(() => Math.random() - 0.5)
+
+  for (const candidateDoc of candidateDocs) {
+    const claimedDocument = await runTransaction(db, async (transaction) => {
+      const documentRef = doc(db, DOCUMENTS_COLLECTION, candidateDoc.id)
+      const latestSnapshot = await transaction.get(documentRef)
+
+      if (!latestSnapshot.exists()) {
+        return null
+      }
+
+      const latestDocument = latestSnapshot.data() as DocumentRecord
+
+      if (latestDocument.enteredByUserId) {
+        return null
+      }
+
+      transaction.update(documentRef, {
+        enteredByUserId: userUid,
+        updated_at: serverTimestamp(),
+      })
+
+      return {
+        ...latestDocument,
+        uid: latestDocument.uid || latestSnapshot.id,
+        enteredByUserId: userUid,
+      }
+    })
+
+    if (claimedDocument) {
+      return claimedDocument
+    }
+  }
+
+  return null
 }
 
 function isDocumentCompleted(document: DocumentRecord): boolean {

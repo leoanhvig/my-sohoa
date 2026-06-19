@@ -5,6 +5,7 @@ import {
   getCountFromServer,
   getDoc,
   getDocs,
+  orderBy,
   query,
   serverTimestamp,
   updateDoc,
@@ -104,7 +105,33 @@ export async function getHealthFormRecordsByCreator(
 
   const healthFormQuery = query(
     collection(db, HEALTH_FORM_COLLECTION),
-    where('creator', '==', creator)
+    where('creator', '==', creator),
+    orderBy('created_at', 'desc')
+  )
+  const snapshot = await getDocs(healthFormQuery)
+
+  return snapshot.docs.map((document) => ({
+    uid: document.id,
+    ...document.data(),
+  })) as HealthFormRecord[]
+}
+
+export async function getHealthFormRecordsByCreatorAndExamInfo({
+  creator,
+  clinicLocation,
+  examDate,
+}: {
+  creator: string
+  clinicLocation: string
+  examDate: string
+}): Promise<HealthFormRecord[]> {
+  if (!creator || !clinicLocation || !examDate) return []
+
+  const healthFormQuery = query(
+    collection(db, HEALTH_FORM_COLLECTION),
+    where('creator', '==', creator),
+    where('clinicLocation', '==', clinicLocation),
+    where('examDate', '==', examDate)
   )
   const snapshot = await getDocs(healthFormQuery)
 

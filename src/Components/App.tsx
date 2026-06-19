@@ -6,6 +6,7 @@ import AppContextProviders from '../contexts/AppContextProvider'
 import { AuthProvider } from '../contexts/AuthContext'
 import { ToastProvider } from '../contexts/ToastContext'
 import Dashboard from './Dashboard'
+import DocumentDetail from './DocumentDetail'
 import FileDetail from './FileDetail'
 import Files from './Files'
 import ForgotPassword from './ForgotPassword'
@@ -28,6 +29,7 @@ function App() {
           <Routes>
             <Route element={<PrivateRoutes />}>
               <Route element={<Dashboard />} path="/" />
+              <Route element={<DocumentDetail />} path="/document/:documentId" />
               <Route element={<Files />} path="/files" />
               <Route element={<FileDetail />} path="/file/:fileId" />
               <Route element={<HealthForm />} path="/health-form" />

@@ -20,7 +20,7 @@ export default function DashboardPage() {
 
   const handleViewFile = useCallback(
     (fileUid: string) => {
-      navigate(`/file/${fileUid}`)
+      navigate(`/document/${fileUid}`)
     },
     [navigate]
   )

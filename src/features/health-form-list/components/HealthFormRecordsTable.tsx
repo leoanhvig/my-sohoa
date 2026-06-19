@@ -61,6 +61,16 @@ export function HealthFormRecordsTable({
           />
         ),
       },
+      {
+        id: 'created_at',
+        accessorFn: (record) => record.created_at,
+        header: 'created_at',
+        cell: ({ row }) => (
+          <span title={formatValue(row.original.created_at)}>
+            {formatValue(row.original.created_at)}
+          </span>
+        ),
+      },
       ...dynamicColumns,
     ]
   }, [records, selectedCreator])
@@ -93,7 +103,7 @@ export function HealthFormRecordsTable({
                     <th
                       key={header.id}
                       className={
-                        header.column.id === 'action'
+                        header.column.id === 'created_at'
                           ? 'sticky left-0 z-10 bg-slate-50 px-4 py-3 text-left align-top font-bold text-slate-600'
                           : 'whitespace-nowrap px-4 py-3 text-left font-bold text-slate-600'
                       }
@@ -128,7 +138,7 @@ export function HealthFormRecordsTable({
                       <td
                         key={cell.id}
                         className={
-                          cell.column.id === 'action'
+                          cell.column.id === 'created_at'
                             ? 'sticky left-0 bg-white px-4 py-3'
                             : 'max-w-xs truncate whitespace-nowrap px-4 py-3 font-medium text-slate-700'
                         }

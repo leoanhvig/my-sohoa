@@ -31,7 +31,7 @@ export function ToastProvider({ children }: IToastProviderProps): JSX.Element {
     progress = undefined
   ): void {
     toast[type](message, {
-      position: 'bottom-right',
+      position: 'top-center',
       autoClose: autoClose,
       hideProgressBar: hideProgressBar,
       closeOnClick: closeOnClick,
