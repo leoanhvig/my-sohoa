@@ -1,10 +1,12 @@
 import type { DocumentRecord } from '@/apis/document'
+import { getAuthorizationHeader, getDriveFileContentUrl } from '@/apis/drive'
 import { SpecialZoomLevel, Viewer, Worker } from '@react-pdf-viewer/core'
 import '@react-pdf-viewer/core/lib/styles/index.css'
 import { defaultLayoutPlugin } from '@react-pdf-viewer/default-layout'
 import '@react-pdf-viewer/default-layout/lib/styles/index.css'
 import { FileText, Loader2 } from 'lucide-react'
 import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.js?url'
+import { useEffect, useState } from 'react'
 import { StatusMessage } from './StatusMessage'
 
 type DocumentPreviewPaneProps = {
@@ -33,6 +35,10 @@ function getPreviewKind(documentRecord?: DocumentRecord | null): PreviewKind {
 }
 
 function getPdfSourceUrl(documentRecord: DocumentRecord, previewUrl: string) {
+  if (documentRecord.drive_file_id) {
+    return getDriveFileContentUrl(documentRecord.drive_file_id)
+  }
+
   return (
     documentRecord.download_url ||
     documentRecord.drive_download_link ||
@@ -48,10 +54,56 @@ export function DocumentPreviewPane({
   error,
 }: DocumentPreviewPaneProps) {
   const defaultLayoutPluginInstance = defaultLayoutPlugin()
+  const [authorizationHeader, setAuthorizationHeader] = useState<
+    Record<string, string>
+  >({})
+  const [authorizationError, setAuthorizationError] = useState('')
   const previewKind = getPreviewKind(documentRecord)
   const pdfSourceUrl = documentRecord
     ? getPdfSourceUrl(documentRecord, previewUrl)
     : ''
+  const shouldUseDriveContentApi = Boolean(documentRecord?.drive_file_id)
+
+  useEffect(() => {
+    let isMounted = true
+
+    async function loadAuthorizationHeader() {
+      if (!shouldUseDriveContentApi) {
+        setAuthorizationHeader({})
+        setAuthorizationError('')
+        return
+      }
+
+      try {
+        const headers = await getAuthorizationHeader()
+
+        if (isMounted) {
+          setAuthorizationHeader(headers)
+          setAuthorizationError('')
+        }
+      } catch (authError) {
+        if (isMounted) {
+          setAuthorizationHeader({})
+          setAuthorizationError(
+            authError instanceof Error
+              ? authError.message
+              : 'Không lấy được token để tải file Drive.'
+          )
+        }
+      }
+    }
+
+    loadAuthorizationHeader()
+
+    return () => {
+      isMounted = false
+    }
+  }, [shouldUseDriveContentApi])
+
+  const canRenderPdfViewer =
+    previewKind === 'pdf' &&
+    pdfSourceUrl &&
+    (!shouldUseDriveContentApi || Boolean(authorizationHeader.Authorization))
 
   return (
     <section className="flex min-h-[45vh] flex-col border-r border-slate-300 bg-slate-500 md:min-h-0">
@@ -81,10 +133,17 @@ export function DocumentPreviewPane({
             </div>
 
             <div className="min-h-0 flex-1 bg-slate-600">
-              {previewKind === 'pdf' && pdfSourceUrl ? (
+              {authorizationError && (
+                <div className="border-b border-slate-200 bg-slate-50 px-3 py-2 text-xs text-amber-700">
+                  {authorizationError}
+                </div>
+              )}
+
+              {canRenderPdfViewer ? (
                 <Worker workerUrl={pdfWorkerUrl}>
                   <Viewer
                     fileUrl={pdfSourceUrl}
+                    httpHeaders={authorizationHeader}
                     defaultScale={SpecialZoomLevel.PageFit}
                     plugins={[defaultLayoutPluginInstance]}
                     renderLoader={(percentages) => (

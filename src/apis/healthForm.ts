@@ -1,6 +1,7 @@
 import {
   addDoc,
   collection,
+  deleteDoc,
   doc,
   getCountFromServer,
   getDoc,
@@ -57,6 +58,12 @@ export async function updateHealthFormRecord(
     ...record,
     updated_at: serverTimestamp(),
   })
+}
+
+export async function deleteHealthFormRecord(recordId: string): Promise<void> {
+  if (!recordId) return
+
+  await deleteDoc(doc(db, HEALTH_FORM_COLLECTION, recordId))
 }
 
 export async function findDuplicateHealthFormRecord({

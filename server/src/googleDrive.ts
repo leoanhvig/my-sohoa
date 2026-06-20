@@ -22,6 +22,13 @@ export interface DriveFolderInfo {
   webViewLink: string
 }
 
+export interface DriveFileContentInfo {
+  id: string
+  name: string
+  mimeType: string
+  size: string
+}
+
 function getPrivateKey(value?: string): string | undefined {
   return value?.replace(/\\n/g, '\n')
 }
@@ -43,6 +50,10 @@ function getDriveClient() {
   })
 
   return google.drive({ version: 'v3', auth })
+}
+
+export function getAuthenticatedDriveClient() {
+  return getDriveClient()
 }
 
 export function extractDriveFolderId(input: string): string {
@@ -87,6 +98,24 @@ export async function getDriveFolderInfo(
     id: response.data.id || folderId,
     name: response.data.name || folderId,
     webViewLink: response.data.webViewLink || '',
+  }
+}
+
+export async function getDriveFileContentInfo(
+  fileId: string
+): Promise<DriveFileContentInfo> {
+  const drive = getDriveClient()
+  const response = await drive.files.get({
+    fileId,
+    fields: 'id,name,mimeType,size',
+    supportsAllDrives: true,
+  })
+
+  return {
+    id: response.data.id || fileId,
+    name: response.data.name || fileId,
+    mimeType: response.data.mimeType || 'application/octet-stream',
+    size: response.data.size || '',
   }
 }
 

@@ -11,6 +11,28 @@ type ExportHealthFormFilters = {
   examDate: string
 }
 
+type TimestampLike = {
+  toDate: () => Date
+}
+
+function hasToDate(value: unknown): value is TimestampLike {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'toDate' in value &&
+    typeof (value as { toDate?: unknown }).toDate === 'function'
+  )
+}
+
+function getCreatedAtTime(value: unknown): number {
+  if (hasToDate(value)) return value.toDate().getTime()
+  if (value instanceof Date) return value.getTime()
+  if (typeof value === 'number') return value
+  if (typeof value === 'string') return new Date(value).getTime()
+
+  return 0
+}
+
 export function useExportHealthFormExcel() {
   const { showError, showTypedToast } = useToast()
   const [isExporting, setIsExporting] = useState(false)
@@ -47,7 +69,13 @@ export function useExportHealthFormExcel() {
         return
       }
 
-      const rows = records.map((record) =>
+      const sortedRecords = [...records].sort(
+        (recordA, recordB) =>
+          getCreatedAtTime(recordA.created_at) -
+          getCreatedAtTime(recordB.created_at)
+      )
+
+      const rows = sortedRecords.map((record) =>
         healthFormColumns.map((column) => formatValue(record[column.field]))
       )
       const worksheet = XLSX.utils.aoa_to_sheet([

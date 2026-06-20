@@ -133,6 +133,7 @@ const baseFormFields: HealthFormField[] = [
     name: 'contraception',
     label: 'Biện pháp tránh thai',
     component: 'select',
+    multiple: true,
     options: [
       'Không',
       'Bao cao su',
@@ -308,6 +309,7 @@ const baseFormFields: HealthFormField[] = [
 
 const formFields: HealthFormField[] = baseFormFields.map((field) => ({
   ...field,
+  multiple: field.component === 'select' ? true : field.multiple,
   saveData: savedFieldLabels.includes(field.label),
   required: ['patientCode', 'fullName', 'clinicLocation', 'examDate'].includes(
     field.name
@@ -317,21 +319,21 @@ const formFields: HealthFormField[] = baseFormFields.map((field) => ({
 const defaultHealthFormValues: HealthFormValues = {
   ethnicity: '',
   relationshipStatus: '',
-  contraception: 'Không',
-  hpvVaccinated: 'Chưa tiêm',
-  cervicalCancerScreened: 'Chưa bao giờ',
-  gynecologicalDisease: 'Không',
-  underlyingDisease: 'Không',
-  smoking: 'Không',
-  alcohol: 'Không',
-  hivStatus: 'Âm tính',
-  immunosuppressant: 'Không',
-  exercise: 'Không',
-  swimming: 'Không',
-  familyCervicalCancer: 'Không',
-  currentSymptoms: 'Không',
-  aiResult: 'Bình thường',
-  treatmentPlan: 'Tái khám sau 1 năm',
+  contraception: '',
+  hpvVaccinated: '',
+  cervicalCancerScreened: '',
+  gynecologicalDisease: '',
+  underlyingDisease: '',
+  smoking: '',
+  alcohol: '',
+  hivStatus: '',
+  immunosuppressant: '',
+  exercise: '',
+  swimming: '',
+  familyCervicalCancer: '',
+  currentSymptoms: '',
+  aiResult: '',
+  treatmentPlan: '',
 }
 
 const otherFieldMappings = [
@@ -416,6 +418,29 @@ function splitMultiSelectOtherValue(value: HealthFormValue | undefined) {
   }
 }
 
+function splitContraceptionValue(value: HealthFormValue | undefined) {
+  const values = getStringValue(value)
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean)
+  const contraceptionYearsItem = values.find((item) =>
+    item.startsWith('Thuốc uống:')
+  )
+  const otherItem = values.find((item) => item.startsWith('Khác:'))
+
+  return {
+    selectedValues: values.map((item) => {
+      if (item.startsWith('Thuốc uống:')) return 'Thuốc uống'
+      if (item.startsWith('Khác:')) return 'Khác'
+
+      return item
+    }),
+    contraceptionYears:
+      contraceptionYearsItem?.replace(/^Thuốc uống:\s*/, '').trim() || '',
+    otherValue: otherItem?.replace(/^Khác:\s*/, '').trim() || '',
+  }
+}
+
 function normalizeParaValue(value?: string) {
   const trimmedValue = value?.trim() || ''
   const digitsOnly = trimmedValue.replace(/\D/g, '')
@@ -428,7 +453,11 @@ function normalizeParaValue(value?: string) {
 }
 
 function splitSmokingValue(value: string) {
-  const match = value.match(/^Đang hút:\s*(.*?)\s*(?:điếu\/ngày)?$/i)
+  const smokingValue = value
+    .split(',')
+    .map((item) => item.trim())
+    .find((item) => item.startsWith('Đang hút:'))
+  const match = smokingValue?.match(/^Đang hút:\s*(.*?)\s*(?:điếu\/ngày)?$/i)
 
   if (!match?.[1]) {
     return null
@@ -466,57 +495,44 @@ function FieldInput({
   }
 
   if (field.component === 'select') {
-    if (field.multiple) {
-      const selectedValues = watch(field.name)
-      const normalizedSelectedValues = Array.isArray(selectedValues)
-        ? selectedValues
-        : selectedValues
-        ? [selectedValues]
-        : []
-
-      return (
-        <div className="mt-2 grid gap-2 rounded-md border border-slate-300 bg-white p-3 shadow-sm sm:grid-cols-2">
-          {field.options?.map((option) => (
-            <label
-              key={option}
-              className="flex items-center gap-2 text-sm font-medium text-slate-700"
-            >
-              <input
-                type="checkbox"
-                checked={normalizedSelectedValues.includes(option)}
-                onChange={(event) => {
-                  const nextValues = event.target.checked
-                    ? [...normalizedSelectedValues, option]
-                    : normalizedSelectedValues.filter(
-                        (value) => value !== option
-                      )
-
-                  setValue(field.name, nextValues, {
-                    shouldDirty: true,
-                    shouldValidate: true,
-                  })
-                }}
-                className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
-              />
-              {option}
-            </label>
-          ))}
-        </div>
-      )
-    }
+    const selectedValues = watch(field.name)
+    const normalizedSelectedValues = Array.isArray(selectedValues)
+      ? selectedValues
+      : selectedValues
+      ? [selectedValues]
+      : []
 
     return (
-      <select
-        {...register(field.name, registerOptions)}
-        className={baseClassName}
-      >
-        <option value="">Chọn thông tin</option>
+      <div className="mt-2 grid gap-2 rounded-md border border-slate-300 bg-white p-3 shadow-sm sm:grid-cols-2">
+        <input
+          type="hidden"
+          {...register(field.name, registerOptions)}
+          value={getStringValue(normalizedSelectedValues)}
+        />
         {field.options?.map((option) => (
-          <option key={option} value={option}>
+          <label
+            key={option}
+            className="flex items-center gap-2 text-sm font-medium text-slate-700"
+          >
+            <input
+              type="checkbox"
+              checked={normalizedSelectedValues.includes(option)}
+              onChange={(event) => {
+                const nextValues = event.target.checked
+                  ? [...normalizedSelectedValues, option]
+                  : normalizedSelectedValues.filter((value) => value !== option)
+
+                setValue(field.name, nextValues, {
+                  shouldDirty: true,
+                  shouldValidate: true,
+                })
+              }}
+              className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+            />
             {option}
-          </option>
+          </label>
         ))}
-      </select>
+      </div>
     )
   }
 
@@ -581,8 +597,18 @@ export default function HealthForm() {
     })
 
     formFields
-      .filter((field) => field.multiple)
+      .filter((field) => field.component === 'select')
       .forEach((field) => {
+        if (field.name === 'contraception') {
+          const { selectedValues, contraceptionYears, otherValue } =
+            splitContraceptionValue(formValues[field.name])
+
+          formValues[field.name] = selectedValues
+          formValues.contraceptionYears = contraceptionYears
+          formValues.otherContraception = otherValue
+          return
+        }
+
         if (field.name === 'screeningMethod') {
           const { selectedValues, otherValue } = splitMultiSelectOtherValue(
             formValues[field.name]
@@ -590,6 +616,22 @@ export default function HealthForm() {
 
           formValues[field.name] = selectedValues
           formValues.otherScreeningMethod = otherValue
+          return
+        }
+
+        const otherFieldMapping = otherFieldMappings.find(
+          (mapping) => mapping.mainField === field.name
+        )
+
+        if (otherFieldMapping) {
+          const { selectedValues, otherValue } = splitMultiSelectOtherValue(
+            formValues[field.name]
+          )
+
+          formValues[field.name] = selectedValues
+          if (otherValue) {
+            formValues[otherFieldMapping.otherField] = otherValue
+          }
           return
         }
 
@@ -632,16 +674,16 @@ export default function HealthForm() {
   const familyCervicalCancer = watch('familyCervicalCancer')
 
   useEffect(() => {
-    if (contraception !== 'Thuốc uống') {
+    if (!includesValue(contraception, 'Thuốc uống')) {
       setValue('contraceptionYears', '')
     }
-    if (contraception !== 'Khác') {
+    if (!includesValue(contraception, 'Khác')) {
       setValue('otherContraception', '')
     }
   }, [contraception, setValue])
 
   useEffect(() => {
-    if (hpvVaccinated !== 'Đã tiêm') {
+    if (!includesValue(hpvVaccinated, 'Đã tiêm')) {
       setValue('hpvVaccineType', '')
       setValue('hpvDoseCount', '')
     }
@@ -654,57 +696,61 @@ export default function HealthForm() {
   }, [screeningMethod, setValue])
 
   useEffect(() => {
-    if (gynecologicalDisease !== 'Khác') {
+    if (!includesValue(gynecologicalDisease, 'Khác')) {
       setValue('otherGynecologicalDisease', '')
     }
   }, [gynecologicalDisease, setValue])
 
   useEffect(() => {
-    if (underlyingDisease !== 'Khác') {
+    if (!includesValue(underlyingDisease, 'Khác')) {
       setValue('otherUnderlyingDisease', '')
     }
   }, [underlyingDisease, setValue])
 
   useEffect(() => {
-    if (smoking !== 'Đang hút') {
+    if (!includesValue(smoking, 'Đang hút')) {
       setValue('cigarettesPerDay', '')
     }
   }, [smoking, setValue])
 
   useEffect(() => {
-    if (immunosuppressant !== 'Có') {
+    if (!includesValue(immunosuppressant, 'Có')) {
       setValue('immunosuppressantDrugName', '')
     }
   }, [immunosuppressant, setValue])
 
   useEffect(() => {
-    if (familyCervicalCancer !== 'Có') {
+    if (!includesValue(familyCervicalCancer, 'Có')) {
       setValue('familyCervicalCancerDetail', '')
     }
   }, [familyCervicalCancer, setValue])
 
   function shouldHideField(fieldName: string) {
     const shouldHideContraceptionFields =
-      contraception !== 'Thuốc uống' && fieldName === 'contraceptionYears'
+      !includesValue(contraception, 'Thuốc uống') &&
+      fieldName === 'contraceptionYears'
     const shouldHideOtherContraception =
-      contraception !== 'Khác' && fieldName === 'otherContraception'
+      !includesValue(contraception, 'Khác') &&
+      fieldName === 'otherContraception'
     const shouldHideHpvFields =
-      hpvVaccinated !== 'Đã tiêm' &&
+      !includesValue(hpvVaccinated, 'Đã tiêm') &&
       ['hpvVaccineType', 'hpvDoseCount'].includes(fieldName)
     const shouldHideOtherScreeningMethod =
       !includesValue(screeningMethod, 'Khác') &&
       fieldName === 'otherScreeningMethod'
     const shouldHideOtherGynecologicalDisease =
-      gynecologicalDisease !== 'Khác' &&
+      !includesValue(gynecologicalDisease, 'Khác') &&
       fieldName === 'otherGynecologicalDisease'
     const shouldHideOtherUnderlyingDisease =
-      underlyingDisease !== 'Khác' && fieldName === 'otherUnderlyingDisease'
+      !includesValue(underlyingDisease, 'Khác') &&
+      fieldName === 'otherUnderlyingDisease'
     const shouldHideSmokingFields =
-      smoking !== 'Đang hút' && fieldName === 'cigarettesPerDay'
+      !includesValue(smoking, 'Đang hút') && fieldName === 'cigarettesPerDay'
     const shouldHideImmunosuppressantFields =
-      immunosuppressant !== 'Có' && fieldName === 'immunosuppressantDrugName'
+      !includesValue(immunosuppressant, 'Có') &&
+      fieldName === 'immunosuppressantDrugName'
     const shouldHideFamilyCervicalCancerFields =
-      familyCervicalCancer !== 'Có' &&
+      !includesValue(familyCervicalCancer, 'Có') &&
       fieldName === 'familyCervicalCancerDetail'
 
     return (
@@ -733,15 +779,45 @@ export default function HealthForm() {
 
     otherFieldMappings.forEach(({ mainField, otherField, triggerValue }) => {
       const field = formFields.find((formField) => formField.name === mainField)
-
-      if (field?.multiple) return
-
+      const mainFieldValue = values[mainField]
       const otherValue = getStringValue(values[otherField]).trim()
 
-      if (!includesValue(values[mainField], triggerValue) || !otherValue) return
+      if (!includesValue(mainFieldValue, triggerValue) || !otherValue) return
+
+      if (field?.multiple && Array.isArray(mainFieldValue)) {
+        savedValues[mainField] = mainFieldValue
+          .map((value) =>
+            value === triggerValue ? `${triggerValue}: ${otherValue}` : value
+          )
+          .join(', ')
+        return
+      }
 
       savedValues[mainField] = `${triggerValue}: ${otherValue}`
     })
+
+    if (Array.isArray(values.contraception)) {
+      const contraceptionYears = getStringValue(
+        values.contraceptionYears
+      ).trim()
+      const otherContraception = getStringValue(
+        values.otherContraception
+      ).trim()
+
+      savedValues.contraception = values.contraception
+        .map((value) => {
+          if (value === 'Thuốc uống' && contraceptionYears) {
+            return `Thuốc uống: ${contraceptionYears}`
+          }
+
+          if (value === 'Khác' && otherContraception) {
+            return `Khác: ${otherContraception}`
+          }
+
+          return value
+        })
+        .join(', ')
+    }
 
     if (Array.isArray(values.screeningMethod)) {
       const otherScreeningMethod = getStringValue(
@@ -759,8 +835,18 @@ export default function HealthForm() {
 
     const cigarettesPerDay = getStringValue(values.cigarettesPerDay).trim()
 
-    if (values.smoking === 'Đang hút' && cigarettesPerDay) {
-      savedValues.smoking = `Đang hút: ${cigarettesPerDay} điếu/ngày`
+    if (includesValue(values.smoking, 'Đang hút') && cigarettesPerDay) {
+      if (Array.isArray(values.smoking)) {
+        savedValues.smoking = values.smoking
+          .map((value) =>
+            value === 'Đang hút'
+              ? `Đang hút: ${cigarettesPerDay} điếu/ngày`
+              : value
+          )
+          .join(', ')
+      } else {
+        savedValues.smoking = `Đang hút: ${cigarettesPerDay} điếu/ngày`
+      }
     }
 
     return savedValues
@@ -861,8 +947,8 @@ export default function HealthForm() {
 
     reset({
       ...emptyValues,
-      clinicLocation: getStringValue(values.clinicLocation),
-      examDate: getStringValue(values.examDate),
+      clinicLocation: values.clinicLocation,
+      examDate: values.examDate,
     })
   }
 
@@ -918,14 +1004,6 @@ export default function HealthForm() {
         </section>
 
         <div className="flex justify-end gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-          <button
-            type="button"
-            onClick={() => reset()}
-            disabled={isSaving}
-            className="rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-bold text-slate-700 shadow-sm transition hover:bg-slate-50"
-          >
-            {isUpdateMode ? 'Reset form' : 'Xóa form'}
-          </button>
           <button
             type="submit"
             disabled={isSaving}

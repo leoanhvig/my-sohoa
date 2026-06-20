@@ -14,6 +14,27 @@ export interface SyncDriveFolderResponse {
   skippedDocuments: number
 }
 
+export function getDriveFileContentUrl(fileId: string): string {
+  const apiBaseUrl =
+    import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000'
+
+  return `${apiBaseUrl}/api/drive/files/${encodeURIComponent(fileId)}/content`
+}
+
+export async function getAuthorizationHeader(): Promise<
+  Record<string, string>
+> {
+  const token = await auth.currentUser?.getIdToken()
+
+  if (!token) {
+    throw new Error('You must be logged in to load Google Drive file content.')
+  }
+
+  return {
+    Authorization: `Bearer ${token}`,
+  }
+}
+
 export function extractDriveFolderId(input: string): string {
   const trimmedInput = input.trim()
   const folderMatch = trimmedInput.match(/\/folders\/([a-zA-Z0-9_-]+)/)
