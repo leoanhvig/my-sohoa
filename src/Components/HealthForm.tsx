@@ -54,7 +54,7 @@ const savedFieldLabels = [
   'Phường/xã',
   'Tỉnh/TP',
   'Đơn vị công tác',
-  'Học vấn',
+  'Chi tiết',
   'Trình độ',
   'PARA',
   'Tuổi QHTD đầu tiên',
@@ -503,7 +503,7 @@ function FieldInput({
       : []
 
     return (
-      <div className="mt-2 grid gap-2 rounded-md border border-slate-300 bg-white p-3 shadow-sm sm:grid-cols-2">
+      <div className="mt-2 flex flex-wrap gap-3 rounded-md border border-slate-300 bg-white p-3 shadow-sm">
         <input
           type="hidden"
           {...register(field.name, registerOptions)}
@@ -512,7 +512,7 @@ function FieldInput({
         {field.options?.map((option) => (
           <label
             key={option}
-            className="flex items-center gap-2 text-sm font-medium text-slate-700"
+            className="inline-flex w-fit cursor-pointer items-center gap-3 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-700 transition hover:border-indigo-200 hover:bg-indigo-50 sm:px-3 sm:py-2"
           >
             <input
               type="checkbox"
@@ -527,7 +527,7 @@ function FieldInput({
                   shouldValidate: true,
                 })
               }}
-              className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+              className="h-5 w-5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 sm:h-4 sm:w-4"
             />
             {option}
           </label>
@@ -567,6 +567,7 @@ export default function HealthForm() {
     handleSubmit,
     register,
     reset,
+    setFocus,
     setValue,
     watch,
     formState: { errors },
@@ -949,6 +950,13 @@ export default function HealthForm() {
       ...emptyValues,
       clinicLocation: values.clinicLocation,
       examDate: values.examDate,
+    })
+
+    requestAnimationFrame(() => {
+      document
+        .querySelector<HTMLInputElement>('input[name="patientCode"]')
+        ?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      setFocus('patientCode')
     })
   }
 

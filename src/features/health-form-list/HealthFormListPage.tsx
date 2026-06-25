@@ -13,7 +13,7 @@ import { HealthFormListHeader } from './components/HealthFormListHeader'
 import { HealthFormRecordsTable } from './components/HealthFormRecordsTable'
 import { useExportHealthFormExcel } from './hooks/useExportHealthFormExcel'
 
-const RECORDS_PER_PAGE = 15
+const RECORDS_PER_PAGE = 100
 const CLINIC_LOCATION_OPTIONS = [
   'Nhà VH Lao Động TP. Thủ Đức',
   'Nhà VH Lao Động Củ Chi',
