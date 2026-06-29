@@ -1,11 +1,9 @@
-import { getDocumentByUid } from '@/apis/document'
+import type { FileRecord } from '@/apis/file'
 
-export function getPreviewUrl(
-  documentRecord: Awaited<ReturnType<typeof getDocumentByUid>> | undefined
-) {
-  if (!documentRecord) {
+export function getPreviewUrl(fileRecord?: FileRecord | null) {
+  if (!fileRecord) {
     return ''
   }
 
-  return documentRecord.download_url || ''
+  return fileRecord.download_url || ''
 }

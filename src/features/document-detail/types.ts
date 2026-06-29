@@ -1,7 +1,7 @@
 export type DocumentRecordFormValues = {
   soKyHieu: string
   ngayThang: string
-  tacGia: string
+  coQuanBanHanh: string
   trichYeu: string
   soTo: string
 }

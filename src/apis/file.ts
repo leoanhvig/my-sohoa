@@ -5,6 +5,7 @@ import {
   getDocs,
   limit,
   query,
+  runTransaction,
   serverTimestamp,
   setDoc,
   updateDoc,
@@ -16,7 +17,17 @@ export interface CreateFileRecordParams {
   file_name: string
   number_of_file: number
   number_of_file_done?: number
+  is_completed?: boolean
   enteredByUserId?: string
+  relative_path?: string
+  storage_path?: string
+  download_url?: string
+  so_ky_hieu?: string
+  ngay_thang?: string
+  tac_gia?: string
+  co_quan_ban_hanh?: string
+  trich_yeu?: string
+  so_to?: number
   creator_uid: string
   updated_uid: string
   storage_provider?: 'firebase_storage'
@@ -35,9 +46,19 @@ export interface UpdateFileRecordParams {
   file_name: string
   number_of_file: number
   number_of_file_done: number
+  is_completed?: boolean
   creator_uid: string
   updated_uid: string
   storage_provider: 'firebase_storage'
+  relative_path?: string
+  storage_path?: string
+  download_url?: string
+  so_ky_hieu?: string
+  ngay_thang?: string
+  tac_gia?: string
+  co_quan_ban_hanh?: string
+  trich_yeu?: string
+  so_to?: number
 }
 
 export interface DashboardFileRecord extends FileRecord {
@@ -45,12 +66,23 @@ export interface DashboardFileRecord extends FileRecord {
 }
 
 const FILE_COLLECTION = 'Files'
+const RANDOM_CLAIM_CANDIDATE_LIMIT = 10
 
 export async function createFileRecord({
   file_name,
   number_of_file,
   number_of_file_done = 0,
+  is_completed = false,
   enteredByUserId = '',
+  relative_path = '',
+  storage_path = '',
+  download_url = '',
+  so_ky_hieu = '',
+  ngay_thang = '',
+  tac_gia = '',
+  co_quan_ban_hanh = '',
+  trich_yeu = '',
+  so_to = 1,
   creator_uid,
   updated_uid,
   storage_provider = 'firebase_storage',
@@ -62,7 +94,17 @@ export async function createFileRecord({
     file_name,
     number_of_file,
     number_of_file_done,
+    is_completed,
     enteredByUserId,
+    relative_path,
+    storage_path,
+    download_url,
+    so_ky_hieu,
+    ngay_thang,
+    tac_gia,
+    co_quan_ban_hanh,
+    trich_yeu,
+    so_to,
     creator_uid,
     updated_uid,
     storage_provider,
@@ -200,16 +242,93 @@ export async function claimFileRecord({
   })
 }
 
+export async function claimRandomUnenteredFile(
+  userUid: string
+): Promise<FileRecord | null> {
+  if (!userUid) {
+    return null
+  }
+
+  const filesCollection = collection(db, FILE_COLLECTION)
+  const filesQuery = query(
+    filesCollection,
+    where('enteredByUserId', '==', ''),
+    limit(RANDOM_CLAIM_CANDIDATE_LIMIT)
+  )
+  const snapshot = await getDocs(filesQuery)
+  const candidateDocs = snapshot.docs.sort(() => Math.random() - 0.5)
+
+  for (const candidateDoc of candidateDocs) {
+    const claimedFile = await runTransaction(db, async (transaction) => {
+      const fileRef = doc(db, FILE_COLLECTION, candidateDoc.id)
+      const latestSnapshot = await transaction.get(fileRef)
+
+      if (!latestSnapshot.exists()) {
+        return null
+      }
+
+      const latestFile = latestSnapshot.data() as FileRecord
+
+      if (latestFile.enteredByUserId) {
+        return null
+      }
+
+      transaction.update(fileRef, {
+        enteredByUserId: userUid,
+        updated_uid: userUid,
+        updated_at: serverTimestamp(),
+      })
+
+      return {
+        ...latestFile,
+        uid: latestFile.uid || latestSnapshot.id,
+        enteredByUserId: userUid,
+        updated_uid: userUid,
+      }
+    })
+
+    if (claimedFile) {
+      return claimedFile
+    }
+  }
+
+  return null
+}
+
 export async function updateFileRecordInfo({
   uid,
   file_name,
   number_of_file,
   number_of_file_done,
+  is_completed,
   creator_uid,
   updated_uid,
   storage_provider,
+  relative_path,
+  storage_path,
+  download_url,
+  so_ky_hieu,
+  ngay_thang,
+  tac_gia,
+  co_quan_ban_hanh,
+  trich_yeu,
+  so_to,
 }: UpdateFileRecordParams): Promise<void> {
   const fileRef = doc(db, FILE_COLLECTION, uid)
+  const optionalPayload = Object.fromEntries(
+    Object.entries({
+      relative_path,
+      storage_path,
+      download_url,
+      is_completed,
+      so_ky_hieu,
+      ngay_thang,
+      tac_gia,
+      co_quan_ban_hanh,
+      trich_yeu,
+      so_to,
+    }).filter(([, value]) => value !== undefined)
+  )
 
   await updateDoc(fileRef, {
     file_name,
@@ -218,6 +337,7 @@ export async function updateFileRecordInfo({
     creator_uid,
     updated_uid,
     storage_provider,
+    ...optionalPayload,
     updated_at: serverTimestamp(),
   })
 }

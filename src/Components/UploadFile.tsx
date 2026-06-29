@@ -126,32 +126,42 @@ export default function UploadFile() {
       setLocalError('')
       setLocalSuccess('')
 
-      const fileRecord = await createFileRecord({
-        file_name:
-          localFolderName.trim() ||
-          `PDF upload ${new Date().toLocaleString('vi-VN')}`,
-        number_of_file: totalPdfPages || pdfFiles.length,
-        enteredByUserId: '',
-        creator_uid: authUser.uid,
-        updated_uid: authUser.uid,
-        storage_provider: 'firebase_storage',
-      })
       const uploadedFiles = await uploadPdfFiles({ files: pdfFiles })
 
       for (const uploadedFile of uploadedFiles) {
-        await createDocumentRecord({
-          uid_file: fileRecord.uid,
-          file_name: uploadedFile.originalName,
-          relative_path: `${fileRecord.file_name}/${uploadedFile.originalName}`,
+        const originalFile = pdfFiles.find(
+          (file) => file.name === uploadedFile.originalName
+        )
+        const pageCount = originalFile
+          ? pdfPageCounts[getPdfFileKey(originalFile)] || 1
+          : 1
+        const fileNameWithoutExtension = uploadedFile.originalName.replace(
+          /\.pdf$/i,
+          ''
+        )
+        const fileRecord = await createFileRecord({
+          file_name: fileNameWithoutExtension,
+          number_of_file: pageCount,
+          number_of_file_done: 0,
+          enteredByUserId: '',
+          relative_path: `${
+            localFolderName.trim() || fileNameWithoutExtension
+          }/${uploadedFile.originalName}`,
+          storage_path: uploadedFile.storagePath,
+          download_url: uploadedFile.downloadUrl,
           so_ky_hieu: '',
           ngay_thang: '',
           tac_gia: '',
           co_quan_ban_hanh: '',
           trich_yeu: '',
           so_to: 1,
-          storage_path: uploadedFile.storagePath,
-          download_url: uploadedFile.downloadUrl,
+          creator_uid: authUser.uid,
+          updated_uid: authUser.uid,
           storage_provider: 'firebase_storage',
+        })
+
+        await createDocumentRecord({
+          uid_file: fileRecord.uid,
         })
       }
 

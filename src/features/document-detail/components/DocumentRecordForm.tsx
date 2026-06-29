@@ -5,33 +5,29 @@ import { DocumentDetailForm } from './DocumentDetailForm'
 
 type DocumentRecordFormProps = {
   formKey: number
+  resetKey?: string
+  initialValues?: DocumentRecordFormValues
   onApprove: (values: DocumentRecordFormValues) => void | Promise<void>
-  onApproveAndMarkDone: (
-    values: DocumentRecordFormValues
-  ) => void | Promise<void>
   isSaving: boolean
 }
 
 export function DocumentRecordForm({
   formKey,
+  resetKey,
+  initialValues,
   onApprove,
-  onApproveAndMarkDone,
   isSaving,
 }: DocumentRecordFormProps) {
   const [values, setValues] = useState<DocumentRecordFormValues>(
-    defaultRecordFormValues
+    initialValues || defaultRecordFormValues
   )
 
   useEffect(() => {
-    setValues(defaultRecordFormValues)
-  }, [formKey])
+    setValues(initialValues || defaultRecordFormValues)
+  }, [formKey, resetKey])
 
   async function handleSubmit() {
     await onApprove(values)
-  }
-
-  async function handleSecondarySubmit() {
-    await onApproveAndMarkDone(values)
   }
 
   return (
@@ -41,7 +37,6 @@ export function DocumentRecordForm({
         onChange={setValues}
         onSubmit={handleSubmit}
         isSubmitting={isSaving}
-        onSecondaryClick={handleSecondarySubmit}
       />
     </div>
   )

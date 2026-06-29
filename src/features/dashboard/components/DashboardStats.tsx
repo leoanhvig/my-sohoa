@@ -13,12 +13,11 @@ import { useClaimRandomDocument } from '../hooks/useClaimRandomDocument'
 export function DashboardStats() {
   const authUser = useUserStore((state) => state.authUser)
   const { claimRandomDocument, isClaiming, error } = useClaimRandomDocument()
-  const { data: totalDocumentDetails = 0, isLoading: loadingTotalFiles } =
-    useQuery({
-      queryKey: ['files', 'done-count', authUser?.uid],
-      queryFn: () => getDoneFilesCountByUser(authUser?.uid || ''),
-      enabled: Boolean(authUser?.uid),
-    })
+  const { data: totalDoneFiles = 0, isLoading: loadingTotalFiles } = useQuery({
+    queryKey: ['files', 'done-count', authUser?.uid],
+    queryFn: () => getDoneFilesCountByUser(authUser?.uid || ''),
+    enabled: Boolean(authUser?.uid),
+  })
   const {
     data: unassignedFilesCount = 0,
     isLoading: loadingUnassignedFilesCount,
@@ -41,7 +40,7 @@ export function DashboardStats() {
     <div className="grid gap-4 p-6 md:grid-cols-3">
       <StatsCard
         title="Tổng hồ sơ đã nhập"
-        value={totalDocumentDetails}
+        value={totalDoneFiles}
         loading={loadingTotalFiles}
       />
       <StatsCard

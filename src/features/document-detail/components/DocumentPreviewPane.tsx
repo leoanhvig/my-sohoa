@@ -1,10 +1,10 @@
-import type { DocumentRecord } from '@/apis/document'
+import type { FileRecord } from '@/apis/file'
 import { getLocalFileContentUrl } from '@/apis/storage'
-import { FileText, Loader2 } from 'lucide-react'
+import { Loader2 } from 'lucide-react'
 import { StatusMessage } from './StatusMessage'
 
 type DocumentPreviewPaneProps = {
-  documentRecord?: DocumentRecord | null
+  fileRecord?: FileRecord | null
   previewUrl: string
   isLoading: boolean
   error: unknown
@@ -12,9 +12,9 @@ type DocumentPreviewPaneProps = {
 
 type PreviewKind = 'pdf' | 'unknown'
 
-function getPreviewKind(documentRecord?: DocumentRecord | null): PreviewKind {
-  const fileName = documentRecord?.file_name?.toLowerCase() || ''
-  const url = documentRecord?.download_url?.toLowerCase() || ''
+function getPreviewKind(fileRecord?: FileRecord | null): PreviewKind {
+  const fileName = fileRecord?.file_name?.toLowerCase() || ''
+  const url = fileRecord?.download_url?.toLowerCase() || ''
 
   if (fileName.endsWith('.pdf') || url.includes('.pdf')) {
     return 'pdf'
@@ -23,24 +23,22 @@ function getPreviewKind(documentRecord?: DocumentRecord | null): PreviewKind {
   return 'unknown'
 }
 
-function getPdfSourceUrl(documentRecord: DocumentRecord, previewUrl: string) {
-  if (documentRecord.storage_path) {
-    return getLocalFileContentUrl(documentRecord.storage_path)
+function getPdfSourceUrl(fileRecord: FileRecord, previewUrl: string) {
+  if (fileRecord.storage_path) {
+    return getLocalFileContentUrl(fileRecord.storage_path)
   }
 
-  return documentRecord.download_url || previewUrl
+  return fileRecord.download_url || previewUrl
 }
 
 export function DocumentPreviewPane({
-  documentRecord,
+  fileRecord,
   previewUrl,
   isLoading,
   error,
 }: DocumentPreviewPaneProps) {
-  const previewKind = getPreviewKind(documentRecord)
-  const pdfSourceUrl = documentRecord
-    ? getPdfSourceUrl(documentRecord, previewUrl)
-    : ''
+  const previewKind = getPreviewKind(fileRecord)
+  const pdfSourceUrl = fileRecord ? getPdfSourceUrl(fileRecord, previewUrl) : ''
   const canRenderPdfViewer = previewKind === 'pdf' && Boolean(pdfSourceUrl)
   const nativePdfUrl = pdfSourceUrl
     ? `${pdfSourceUrl}#toolbar=0&navpanes=0&scrollbar=0&statusbar=0&messages=0&action=download`
@@ -63,17 +61,12 @@ export function DocumentPreviewPane({
           />
         )}
 
-        {!isLoading && !error && !documentRecord && (
+        {!isLoading && !error && !fileRecord && (
           <StatusMessage tone="warning" message="Không tìm thấy hồ sơ." />
         )}
 
-        {documentRecord && previewUrl && (
+        {fileRecord && previewUrl && (
           <div className="flex min-h-0 flex-1 flex-col">
-            <div className="flex items-center gap-2 border-b border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-800">
-              <FileText className="h-4 w-4" />
-              <span>{documentRecord.file_name || 'Document preview'}</span>
-            </div>
-
             <div className="min-h-0 flex-1 bg-slate-600">
               {canRenderPdfViewer ? (
                 <div className="h-full min-h-[70vh] bg-slate-700">
@@ -85,7 +78,7 @@ export function DocumentPreviewPane({
                     className="h-full min-h-[70vh] w-full bg-white"
                   >
                     <iframe
-                      title={documentRecord.file_name || 'Document preview'}
+                      title={fileRecord.file_name || 'Document preview'}
                       src={iframePdfUrl}
                       width="100%"
                       height="100%"
@@ -103,7 +96,7 @@ export function DocumentPreviewPane({
           </div>
         )}
 
-        {documentRecord && !previewUrl && (
+        {fileRecord && !previewUrl && (
           <StatusMessage
             tone="warning"
             message="Hồ sơ chưa có đường dẫn xem trước."

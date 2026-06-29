@@ -1,12 +1,9 @@
 import {
-  addDoc,
   collection,
   doc,
   getDoc,
   getDocs,
-  limit,
   query,
-  runTransaction,
   serverTimestamp,
   setDoc,
   updateDoc,
@@ -24,137 +21,6 @@ export type {
 } from '../interfaces/document'
 
 const DOCUMENTS_COLLECTION = 'Documents'
-const DOCUMENT_INFOS_COLLECTION = 'DocumentDetails'
-const RANDOM_CLAIM_CANDIDATE_LIMIT = 10
-
-export type CreateDocumentInfoParams = {
-  documentUid: string
-  uidFile?: string
-  fileName?: string
-  relativePath?: string
-  creator: string
-  soKyHieu: string
-  ngayThang: string
-  tacGia: string
-  trichYeu: string
-  soTo: string
-}
-
-export type DocumentInfoRecord = CreateDocumentInfoParams & {
-  uid: string
-  created_at?: unknown
-  updated_at?: unknown
-}
-
-export type UpdateDocumentInfoParams = Pick<
-  DocumentInfoRecord,
-  | 'uid'
-  | 'documentUid'
-  | 'soKyHieu'
-  | 'ngayThang'
-  | 'tacGia'
-  | 'trichYeu'
-  | 'soTo'
->
-
-export type UpdateDocumentRecordInfoParams = {
-  uid: string
-  so_ky_hieu: string
-  ngay_thang: string
-  tac_gia: string
-  co_quan_ban_hanh?: string
-  trich_yeu: string
-  so_to: number
-}
-
-export async function createDocumentInfoRecord({
-  documentUid,
-  uidFile = '',
-  fileName = '',
-  relativePath = '',
-  creator,
-  soKyHieu,
-  ngayThang,
-  tacGia,
-  trichYeu,
-  soTo,
-}: CreateDocumentInfoParams): Promise<string> {
-  const document = await addDoc(collection(db, DOCUMENT_INFOS_COLLECTION), {
-    documentUid,
-    uidFile,
-    fileName,
-    relativePath,
-    creator,
-    soKyHieu,
-    ngayThang,
-    tacGia,
-    trichYeu,
-    soTo,
-    created_at: serverTimestamp(),
-    updated_at: serverTimestamp(),
-  })
-
-  return document.id
-}
-
-export async function getDocumentInfosByDocumentUid(
-  documentUid: string
-): Promise<DocumentInfoRecord[]> {
-  if (!documentUid) {
-    return []
-  }
-
-  const documentDetailsCollection = collection(db, DOCUMENT_INFOS_COLLECTION)
-  const documentDetailsQuery = query(
-    documentDetailsCollection,
-    where('documentUid', '==', documentUid)
-  )
-  const snapshot = await getDocs(documentDetailsQuery)
-
-  return snapshot.docs.map((document) => ({
-    uid: document.id,
-    ...(document.data() as CreateDocumentInfoParams),
-  }))
-}
-
-export async function getDocumentDetailsCountByCreator(
-  creator: string
-): Promise<number> {
-  if (!creator) {
-    return 0
-  }
-
-  const documentDetailsCollection = collection(db, DOCUMENT_INFOS_COLLECTION)
-  const documentDetailsQuery = query(
-    documentDetailsCollection,
-    where('creator', '==', creator)
-  )
-  const snapshot = await getDocs(documentDetailsQuery)
-
-  return snapshot.size
-}
-
-export async function updateDocumentInfoRecord({
-  uid,
-  documentUid,
-  soKyHieu,
-  ngayThang,
-  tacGia,
-  trichYeu,
-  soTo,
-}: UpdateDocumentInfoParams): Promise<void> {
-  const documentDetailRef = doc(db, DOCUMENT_INFOS_COLLECTION, uid)
-
-  await updateDoc(documentDetailRef, {
-    documentUid,
-    soKyHieu,
-    ngayThang,
-    tacGia,
-    trichYeu,
-    soTo,
-    updated_at: serverTimestamp(),
-  })
-}
 
 export async function markDocumentAsDone(documentUid: string): Promise<void> {
   const documentRef = doc(db, DOCUMENTS_COLLECTION, documentUid)
@@ -165,42 +31,9 @@ export async function markDocumentAsDone(documentUid: string): Promise<void> {
   })
 }
 
-export async function updateDocumentRecordInfo({
-  uid,
-  so_ky_hieu,
-  ngay_thang,
-  tac_gia,
-  co_quan_ban_hanh = '',
-  trich_yeu,
-  so_to,
-}: UpdateDocumentRecordInfoParams): Promise<void> {
-  const documentRef = doc(db, DOCUMENTS_COLLECTION, uid)
-
-  await updateDoc(documentRef, {
-    so_ky_hieu,
-    ngay_thang,
-    tac_gia,
-    co_quan_ban_hanh,
-    trich_yeu,
-    so_to,
-    updated_at: serverTimestamp(),
-  })
-}
-
 export async function createDocumentRecord({
   uid_file,
   enteredByUserId = '',
-  so_ky_hieu = '',
-  ngay_thang = '',
-  tac_gia = '',
-  co_quan_ban_hanh = '',
-  trich_yeu = '',
-  so_to = 1,
-  file_name,
-  relative_path = '',
-  storage_path = '',
-  download_url = '',
-  storage_provider = 'firebase_storage',
 }: CreateDocumentRecordParams): Promise<DocumentRecord> {
   const documentRef = doc(collection(db, DOCUMENTS_COLLECTION))
   const timestamp = serverTimestamp()
@@ -208,17 +41,6 @@ export async function createDocumentRecord({
     uid: documentRef.id,
     uid_file,
     enteredByUserId,
-    so_ky_hieu,
-    ngay_thang,
-    tac_gia,
-    co_quan_ban_hanh,
-    trich_yeu,
-    so_to,
-    file_name,
-    relative_path,
-    storage_path,
-    download_url,
-    storage_provider,
     created_at: timestamp,
     updated_at: timestamp,
   }
@@ -298,39 +120,6 @@ export async function getDocumentsCount(): Promise<number> {
   return snapshot.size
 }
 
-export async function getEnteredDocumentsCountByUser(
-  userUid: string
-): Promise<number> {
-  if (!userUid) {
-    return 0
-  }
-
-  const documentsCollection = collection(db, DOCUMENTS_COLLECTION)
-  const documentsQuery = query(
-    documentsCollection,
-    where('enteredByUserId', '==', userUid)
-  )
-  const snapshot = await getDocs(documentsQuery)
-
-  return snapshot.size
-}
-
-export async function getUncompletedDocumentsByEnteredUser(
-  userUid: string
-): Promise<DocumentRecord[]> {
-  const documents = await getDocumentsByEnteredUser(userUid)
-
-  return documents.filter((document) => !document.is_completed)
-}
-
-export async function getUncompletedDocumentsCountByEnteredUser(
-  userUid: string
-): Promise<number> {
-  const documents = await getUncompletedDocumentsByEnteredUser(userUid)
-
-  return documents.length
-}
-
 export async function claimDocumentRecord({
   documentUid,
   userUid,
@@ -344,74 +133,4 @@ export async function claimDocumentRecord({
     enteredByUserId: userUid,
     updated_at: serverTimestamp(),
   })
-}
-
-export async function claimRandomUnenteredDocument(
-  userUid: string
-): Promise<DocumentRecord | null> {
-  if (!userUid) {
-    return null
-  }
-
-  const documentsCollection = collection(db, DOCUMENTS_COLLECTION)
-  const documentsQuery = query(
-    documentsCollection,
-    where('enteredByUserId', '==', ''),
-    limit(RANDOM_CLAIM_CANDIDATE_LIMIT)
-  )
-  const snapshot = await getDocs(documentsQuery)
-  const candidateDocs = snapshot.docs.sort(() => Math.random() - 0.5)
-
-  for (const candidateDoc of candidateDocs) {
-    const claimedDocument = await runTransaction(db, async (transaction) => {
-      const documentRef = doc(db, DOCUMENTS_COLLECTION, candidateDoc.id)
-      const latestSnapshot = await transaction.get(documentRef)
-
-      if (!latestSnapshot.exists()) {
-        return null
-      }
-
-      const latestDocument = latestSnapshot.data() as DocumentRecord
-
-      if (latestDocument.enteredByUserId) {
-        return null
-      }
-
-      transaction.update(documentRef, {
-        enteredByUserId: userUid,
-        updated_at: serverTimestamp(),
-      })
-
-      return {
-        ...latestDocument,
-        uid: latestDocument.uid || latestSnapshot.id,
-        enteredByUserId: userUid,
-      }
-    })
-
-    if (claimedDocument) {
-      return claimedDocument
-    }
-  }
-
-  return null
-}
-
-function isDocumentCompleted(document: DocumentRecord): boolean {
-  return Boolean(
-    document.is_completed ||
-      document.so_ky_hieu ||
-      document.ngay_thang ||
-      document.tac_gia ||
-      document.trich_yeu ||
-      document.so_to
-  )
-}
-
-export async function getCompletedDocumentCountByUidFile(
-  uidFile: string
-): Promise<number> {
-  const documents = await getDocumentsByUidFile(uidFile)
-
-  return documents.filter(isDocumentCompleted).length
 }

@@ -10,8 +10,6 @@ type DocumentDetailFormProps = {
   isSubmitting: boolean
   submitLabel?: string
   submittingLabel?: string
-  secondaryLabel?: string
-  onSecondaryClick?: () => void
 }
 
 export function DocumentDetailForm({
@@ -21,8 +19,6 @@ export function DocumentDetailForm({
   isSubmitting,
   submitLabel = 'lưu và thêm 1 dòng mới',
   submittingLabel = 'đang lưu...',
-  secondaryLabel = 'lưu và chuyển trang',
-  onSecondaryClick,
 }: DocumentDetailFormProps) {
   function updateField(
     field: keyof DocumentRecordFormValues,
@@ -44,9 +40,9 @@ export function DocumentDetailForm({
       <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
         <div className="space-y-4">
           <EditableField
-            label="Tác giả"
-            value={values.tacGia}
-            onChange={(value) => updateField('tacGia', value)}
+            label="Cơ quan ban hành"
+            value={values.coQuanBanHanh}
+            onChange={(value) => updateField('coQuanBanHanh', value)}
           />
           <EditableField
             label="Tờ số/trang số"
@@ -74,16 +70,6 @@ export function DocumentDetailForm({
       </div>
 
       <div className="flex gap-3 pb-4">
-        {onSecondaryClick && (
-          <Button
-            type="button"
-            className="h-11 flex-1 bg-emerald-600 font-bold shadow hover:bg-emerald-700"
-            disabled={isSubmitting}
-            onClick={onSecondaryClick}
-          >
-            <CheckCircle2 className="mr-2 h-5 w-5" /> {secondaryLabel}
-          </Button>
-        )}
         <Button
           type="submit"
           className="h-11 flex-1 bg-emerald-600 font-bold shadow hover:bg-emerald-700"

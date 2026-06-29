@@ -26,8 +26,9 @@ export function useDashboardFiles(userUid?: string) {
       const dashboardFiles = fileRecords.map((file) => ({
         ...file,
         is_completed:
-          file.number_of_file > 0 &&
-          (file.number_of_file_done || 0) >= file.number_of_file,
+          file.is_completed ||
+          (file.number_of_file > 0 &&
+            (file.number_of_file_done || 0) >= file.number_of_file),
         isClaimedByCurrentUser: file.enteredByUserId === userUid,
         isUnassigned: !file.enteredByUserId,
       }))

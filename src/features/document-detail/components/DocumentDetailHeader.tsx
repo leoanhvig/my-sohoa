@@ -1,14 +1,17 @@
 import type { DocumentRecord } from '@/apis/document'
+import type { FileRecord } from '@/apis/file'
 import { Button } from '@/Components/ui/button'
 import { ArrowLeft, FileText } from 'lucide-react'
 
 type DocumentDetailHeaderProps = {
   documentRecord?: DocumentRecord | null
+  fileRecord?: FileRecord | null
   onBack: () => void
 }
 
 export function DocumentDetailHeader({
   documentRecord,
+  fileRecord,
   onBack,
 }: DocumentDetailHeaderProps) {
   return (
@@ -26,8 +29,9 @@ export function DocumentDetailHeader({
         <div className="flex min-w-0 items-center gap-2 text-sm font-bold">
           <FileText className="h-4 w-4 shrink-0" />
           <span className="truncate">
-            {documentRecord?.relative_path ||
-              documentRecord?.file_name ||
+            {fileRecord?.relative_path ||
+              fileRecord?.file_name ||
+              documentRecord?.uid ||
               'Đang tải hồ sơ...'}
           </span>
         </div>

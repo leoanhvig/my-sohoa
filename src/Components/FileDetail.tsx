@@ -118,7 +118,7 @@ export default function FileDetail() {
       null,
     [documents, selectedDocumentUid]
   )
-  const previewUrl = getPreviewUrl(selectedDocument)
+  const previewUrl = getPreviewUrl(fileRecord)
   const isLoading = isLoadingFile || isLoadingDocuments
   const error = fileError || documentsError
 
@@ -198,7 +198,7 @@ export default function FileDetail() {
 
       <div className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[minmax(0,1.35fr)_minmax(520px,1fr)]">
         <DocumentPreviewPane
-          documentRecord={selectedDocument}
+          fileRecord={fileRecord}
           previewUrl={previewUrl}
           isLoading={isLoading}
           error={error}
@@ -327,7 +327,8 @@ export default function FileDetail() {
                             <FileText className="mt-0.5 h-5 w-5 shrink-0 text-indigo-500" />
                             <div>
                               <p className="font-bold text-slate-900">
-                                {index + 1}. {documentRecord.file_name}
+                                {index + 1}.{' '}
+                                {fileRecord?.file_name || documentRecord.uid}
                               </p>
                               <p className="mt-1 text-xs text-slate-500">
                                 Document ID: {documentRecord.uid}
