@@ -45,8 +45,9 @@ export default function DocumentDetail() {
   const [recordFormKey, setRecordFormKey] = useState(0)
   const [nextFormValues, setNextFormValues] =
     useState<DocumentRecordFormValues | null>(null)
-  const [editingDocument, setEditingDocument] =
-    useState<DocumentRecord | null>(null)
+  const [editingDocument, setEditingDocument] = useState<DocumentRecord | null>(
+    null
+  )
   const [isSavingDocument, setIsSavingDocument] = useState(false)
   const { showTypedToast } = useToast()
   const { updateFileRecord, isUpdatingFileRecord } = useUpdateFileRecord()
@@ -85,6 +86,24 @@ export default function DocumentDetail() {
     setEditingDocument(null)
   }, [documentId, fileId])
 
+  useEffect(() => {
+    if (error) {
+      console.error('Không tải được document:', error)
+    }
+  }, [error])
+
+  useEffect(() => {
+    if (documentsError) {
+      console.error('Không tải được danh sách documents:', documentsError)
+    }
+  }, [documentsError])
+
+  useEffect(() => {
+    if (fileError) {
+      console.error('Không tải được file:', fileError)
+    }
+  }, [fileError])
+
   const previewUrl = getPreviewUrl(fileRecord)
   const formInitialValues = useMemo<
     DocumentRecordFormValues | undefined
@@ -97,20 +116,12 @@ export default function DocumentDetail() {
       return undefined
     }
 
-    const latestDocumentRecord = documentRecords[documentRecords.length - 1]
+    return undefined
+  }, [fileRecord, nextFormValues])
 
-    return {
-      soKyHieu: latestDocumentRecord?.so_ky_hieu || '',
-      ngayThang: latestDocumentRecord?.ngay_thang || '',
-      coQuanBanHanh: latestDocumentRecord?.co_quan_ban_hanh || '',
-      trichYeu: latestDocumentRecord?.trich_yeu || '',
-      soTo: latestDocumentRecord?.so_to
-        ? String(latestDocumentRecord.so_to)
-        : '',
-    }
-  }, [documentRecords, fileRecord, nextFormValues])
-
-  const updateInitialValues = useMemo<DocumentRecordFormValues | undefined>(() => {
+  const updateInitialValues = useMemo<
+    DocumentRecordFormValues | undefined
+  >(() => {
     if (!editingDocument) {
       return undefined
     }
@@ -141,22 +152,14 @@ export default function DocumentDetail() {
         co_quan_ban_hanh: values.coQuanBanHanh,
         ngay_thang: values.ngayThang,
         so_ky_hieu: values.soKyHieu,
-        so_to: Number(values.soTo || 1),
+        so_to: values.soTo ?? '',
         trich_yeu: values.trichYeu,
       })
 
       await updateFileRecord({
         uid: fileRecord.uid,
-        file_name: fileRecord.file_name,
-        number_of_file: totalPages,
         number_of_file_done: nextDonePages,
         is_completed: isFileCompleted,
-        creator_uid: fileRecord.creator_uid,
-        updated_uid: fileRecord.updated_uid,
-        storage_provider: fileRecord.storage_provider || 'firebase_storage',
-        relative_path: fileRecord.relative_path,
-        storage_path: fileRecord.storage_path,
-        download_url: fileRecord.download_url,
       })
       await queryClient.invalidateQueries({
         queryKey: ['documents', 'by-file', fileRecord.uid],
@@ -174,6 +177,9 @@ export default function DocumentDetail() {
         )
       }
       setRecordFormKey((key) => key + 1)
+    } catch (err) {
+      console.error('Không lưu được document:', err)
+      throw err
     } finally {
       setIsSavingDocument(false)
     }
@@ -189,7 +195,7 @@ export default function DocumentDetail() {
         co_quan_ban_hanh: values.coQuanBanHanh,
         ngay_thang: values.ngayThang,
         so_ky_hieu: values.soKyHieu,
-        so_to: Number(values.soTo || 1),
+        so_to: values.soTo,
         trich_yeu: values.trichYeu,
       })
       await queryClient.invalidateQueries({
@@ -197,6 +203,9 @@ export default function DocumentDetail() {
       })
       setEditingDocument(null)
       setRecordFormKey((key) => key + 1)
+    } catch (err) {
+      console.error('Không cập nhật được document:', err)
+      throw err
     } finally {
       setIsSavingDocument(false)
     }

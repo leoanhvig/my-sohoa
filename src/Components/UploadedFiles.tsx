@@ -1,7 +1,17 @@
-import { Eye, FileText, Loader2, Search, UploadCloud } from 'lucide-react'
+import { useQuery } from '@tanstack/react-query'
+import {
+  Download,
+  Eye,
+  FileText,
+  Loader2,
+  Search,
+  UploadCloud,
+} from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { getDocumentsByUidFile } from '../apis/document'
 import { FileRecord } from '../apis/file'
+import { getAllUsers } from '../apis/user'
 import { useAllFiles } from '../hooks/useAllFiles'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
@@ -23,11 +33,24 @@ function getCompletedPercent(file: FileRecord): number {
   )
 }
 
+function getSafeExcelFileName(fileName: string): string {
+  return (fileName || 'documents').replace(/[\\/:*?"<>|]/g, '-').trim()
+}
+
 export default function UploadedFiles() {
   const navigate = useNavigate()
   const [searchText, setSearchText] = useState('')
+  const [exportingFileUid, setExportingFileUid] = useState('')
   const { data: files = [], isLoading, error } = useAllFiles()
+  const { data: users = [] } = useQuery({
+    queryKey: ['users', 'all'],
+    queryFn: getAllUsers,
+  })
   const allFiles = files as FileRecord[]
+  const userNameByUid = useMemo(
+    () => new Map(users.map((user) => [user.uid, user.user_name])),
+    [users]
+  )
 
   const localFiles = useMemo(
     () => allFiles.filter(isLocalUploadedFile),
@@ -44,9 +67,45 @@ export default function UploadedFiles() {
       (file) =>
         file.file_name.toLowerCase().includes(keyword) ||
         file.uid.toLowerCase().includes(keyword) ||
-        file.creator_uid.toLowerCase().includes(keyword)
+        (userNameByUid.get(file.enteredByUserId) || '')
+          .toLowerCase()
+          .includes(keyword)
     )
-  }, [localFiles, searchText])
+  }, [localFiles, searchText, userNameByUid])
+
+  async function handleExportFile(file: FileRecord) {
+    try {
+      setExportingFileUid(file.uid)
+      const [documents, XLSX] = await Promise.all([
+        getDocumentsByUidFile(file.uid),
+        import('xlsx'),
+      ])
+      const worksheet = XLSX.utils.aoa_to_sheet([
+        [
+          'Số, ký hiệu văn bản',
+          'Ngày, tháng, năm tài liệu',
+          'Trích yếu nội dung',
+          'Cơ quan ban hành',
+          'Tờ số/trang số',
+        ],
+        ...documents.map((documentRecord) => [
+          documentRecord.so_ky_hieu || '',
+          documentRecord.ngay_thang || '',
+          documentRecord.trich_yeu || '',
+          documentRecord.co_quan_ban_hanh || '',
+          documentRecord.so_to || '',
+        ]),
+      ])
+      const workbook = XLSX.utils.book_new()
+
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Documents')
+      XLSX.writeFile(workbook, `${getSafeExcelFileName(file.file_name)}.xlsx`)
+    } catch (err) {
+      console.error('Không export được file documents:', err)
+    } finally {
+      setExportingFileUid('')
+    }
+  }
 
   return (
     <main className="min-h-screen bg-slate-50 px-4 py-8 text-slate-900 sm:px-6 lg:px-8">
@@ -117,7 +176,7 @@ export default function UploadedFiles() {
                     Tiến độ nhập
                   </th>
                   <th className="px-6 py-3 text-left font-bold text-slate-600">
-                    Người tạo
+                    Người nhập
                   </th>
                   <th className="px-6 py-3 text-right font-bold text-slate-600">
                     Hành động
@@ -176,9 +235,24 @@ export default function UploadedFiles() {
                           </div>
                         </td>
                         <td className="px-6 py-4 font-semibold text-slate-600">
-                          {file.creator_uid || 'Không có'}
+                          {userNameByUid.get(file.enteredByUserId) ||
+                            'Chưa có người nhập'}
                         </td>
-                        <td className="px-6 py-4 text-right">
+                        <td className="space-x-2 px-6 py-4 text-right">
+                          <Button
+                            type="button"
+                            size="sm"
+                            className="bg-emerald-600 text-white hover:bg-emerald-700"
+                            disabled={exportingFileUid === file.uid}
+                            onClick={() => handleExportFile(file)}
+                          >
+                            {exportingFileUid === file.uid ? (
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            ) : (
+                              <Download className="mr-2 h-4 w-4" />
+                            )}
+                            Export file
+                          </Button>
                           <Button
                             type="button"
                             size="sm"

@@ -4,7 +4,7 @@ import type { DocumentRecordFormValues } from '../types'
 import { DocumentDetailForm } from './DocumentDetailForm'
 
 type DocumentRecordFormProps = {
-  formKey: number
+  formKey: number | string | undefined
   resetKey?: string
   initialValues?: DocumentRecordFormValues
   onApprove: (values: DocumentRecordFormValues) => void | Promise<void>

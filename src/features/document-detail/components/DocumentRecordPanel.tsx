@@ -35,7 +35,7 @@ export function DocumentRecordPanel({
     <aside className="min-h-0 overflow-auto bg-slate-50 p-4 md:p-6">
       <div className="space-y-5">
         <DocumentRecordForm
-          formKey={formKey}
+          formKey={isUpdateMode ? editingDocument?.uid : formKey}
           resetKey={isUpdateMode ? editingDocument?.uid : resetKey}
           initialValues={isUpdateMode ? updateInitialValues : initialValues}
           onApprove={isUpdateMode ? onUpdate : onApprove}
@@ -61,20 +61,9 @@ export function DocumentRecordPanel({
                 >
                   <p className="text-sm font-bold text-slate-900">
                     {index + 1}.{' '}
-                    {documentRecord.so_ky_hieu || 'Chưa có số ký hiệu'}
+                    {`${documentRecord.so_ky_hieu}-${documentRecord.so_to}` ||
+                      'Chưa có số ký hiệu'}
                   </p>
-                  <p className="text-xs font-semibold text-slate-500">
-                    {documentRecord.co_quan_ban_hanh ||
-                      'Chưa có cơ quan ban hành'}
-                    {documentRecord.ngay_thang
-                      ? ` • ${documentRecord.ngay_thang}`
-                      : ''}
-                  </p>
-                  {documentRecord.trich_yeu && (
-                    <p className="line-clamp-2 text-xs text-slate-600">
-                      {documentRecord.trich_yeu}
-                    </p>
-                  )}
                 </button>
               ))}
             </div>

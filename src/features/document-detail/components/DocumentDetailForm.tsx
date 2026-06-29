@@ -139,7 +139,9 @@ function EditableTextarea({
       <textarea
         rows={4}
         value={value}
-        onChange={(event) => onChange(event.target.value)}
+        onChange={(event) =>
+          onChange(event.target.value.replace(/[\r\n]+/g, ' '))
+        }
         className="mt-1.5 w-full rounded-md border border-blue-500 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-blue-700 focus:ring-2 focus:ring-blue-200"
       />
     </div>

@@ -3,6 +3,7 @@ import {
   doc,
   getDoc,
   getDocs,
+  orderBy,
   query,
   serverTimestamp,
   setDoc,
@@ -95,7 +96,8 @@ export async function getDocumentsByUidFile(
   const documentsCollection = collection(db, DOCUMENTS_COLLECTION)
   const documentsQuery = query(
     documentsCollection,
-    where('uid_file', '==', uidFile)
+    where('uid_file', '==', uidFile),
+    orderBy('created_at', 'asc')
   )
   const snapshot = await getDocs(documentsQuery)
 

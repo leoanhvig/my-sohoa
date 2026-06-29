@@ -37,20 +37,13 @@ export interface FileRecord
 
 export interface UpdateFileRecordParams {
   uid: string
-  file_name: string
-  number_of_file: number
-  number_of_file_done: number
+  file_name?: string
+  number_of_file?: number
+  number_of_file_done?: number
   is_completed?: boolean
-  creator_uid: string
-  updated_uid: string
-  storage_provider: 'firebase_storage'
-  relative_path?: string
-  storage_path?: string
-  download_url?: string
-}
-
-export interface DashboardFileRecord extends FileRecord {
-  completed_file_count: number
+  creator_uid?: string
+  updated_uid?: string
+  storage_provider?: 'firebase_storage'
 }
 
 const FILE_COLLECTION = 'Files'
@@ -91,24 +84,6 @@ export async function createFileRecord({
   await setDoc(fileRef, fileRecord)
 
   return fileRecord
-}
-
-export async function getFileRecordByName(
-  fileName: string
-): Promise<FileRecord | null> {
-  const filesCollection = collection(db, FILE_COLLECTION)
-  const filesQuery = query(
-    filesCollection,
-    where('file_name', '==', fileName),
-    limit(1)
-  )
-  const snapshot = await getDocs(filesQuery)
-
-  if (snapshot.empty) {
-    return null
-  }
-
-  return snapshot.docs[0].data() as FileRecord
 }
 
 export async function getAllFileRecords(): Promise<FileRecord[]> {
@@ -280,28 +255,22 @@ export async function updateFileRecordInfo({
   creator_uid,
   updated_uid,
   storage_provider,
-  relative_path,
-  storage_path,
-  download_url,
 }: UpdateFileRecordParams): Promise<void> {
   const fileRef = doc(db, FILE_COLLECTION, uid)
-  const optionalPayload = Object.fromEntries(
+  const updatePayload = Object.fromEntries(
     Object.entries({
-      relative_path,
-      storage_path,
-      download_url,
+      file_name,
+      number_of_file,
+      number_of_file_done,
       is_completed,
+      creator_uid,
+      updated_uid,
+      storage_provider,
     }).filter(([, value]) => value !== undefined)
   )
 
   await updateDoc(fileRef, {
-    file_name,
-    number_of_file,
-    number_of_file_done,
-    creator_uid,
-    updated_uid,
-    storage_provider,
-    ...optionalPayload,
+    ...updatePayload,
     updated_at: serverTimestamp(),
   })
 }
