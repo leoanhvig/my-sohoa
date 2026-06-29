@@ -1,4 +1,3 @@
-import { getDocumentsByUidFile } from '@/apis/document'
 import { claimFileRecord } from '@/apis/file'
 import { DashboardFile, useDashboardFiles } from '@/hooks/useDashboardFiles'
 import { useUserStore } from '@/stores/userStore'
@@ -20,16 +19,8 @@ export default function DashboardPage() {
   const { files, loading, error, refetch } = useDashboardFiles(authUser?.uid)
 
   const handleViewFile = useCallback(
-    async (fileUid: string) => {
-      const documents = await getDocumentsByUidFile(fileUid)
-      const firstDocument = documents[0]
-
-      if (firstDocument) {
-        navigate(`/document/${firstDocument.uid}`)
-        return
-      }
-
-      navigate(`/file/${fileUid}`)
+    (fileUid: string) => {
+      navigate(`/file/${fileUid}/documents`)
     },
     [navigate]
   )

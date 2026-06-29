@@ -9,6 +9,9 @@ type DocumentRecordFormProps = {
   initialValues?: DocumentRecordFormValues
   onApprove: (values: DocumentRecordFormValues) => void | Promise<void>
   isSaving: boolean
+  submitLabel?: string
+  submittingLabel?: string
+  onCancel?: () => void
 }
 
 export function DocumentRecordForm({
@@ -17,6 +20,9 @@ export function DocumentRecordForm({
   initialValues,
   onApprove,
   isSaving,
+  submitLabel,
+  submittingLabel,
+  onCancel,
 }: DocumentRecordFormProps) {
   const [values, setValues] = useState<DocumentRecordFormValues>(
     initialValues || defaultRecordFormValues
@@ -37,6 +43,9 @@ export function DocumentRecordForm({
         onChange={setValues}
         onSubmit={handleSubmit}
         isSubmitting={isSaving}
+        submitLabel={submitLabel}
+        submittingLabel={submittingLabel}
+        onCancel={onCancel}
       />
     </div>
   )

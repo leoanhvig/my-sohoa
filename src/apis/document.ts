@@ -22,6 +22,15 @@ export type {
 
 const DOCUMENTS_COLLECTION = 'Documents'
 
+export type UpdateDocumentRecordParams = {
+  uid: string
+  co_quan_ban_hanh: string
+  ngay_thang: string
+  so_ky_hieu: string
+  so_to: string
+  trich_yeu: string
+}
+
 export async function markDocumentAsDone(documentUid: string): Promise<void> {
   const documentRef = doc(db, DOCUMENTS_COLLECTION, documentUid)
 
@@ -34,6 +43,11 @@ export async function markDocumentAsDone(documentUid: string): Promise<void> {
 export async function createDocumentRecord({
   uid_file,
   enteredByUserId = '',
+  co_quan_ban_hanh = '',
+  ngay_thang = '',
+  so_ky_hieu = '',
+  so_to = '',
+  trich_yeu = '',
 }: CreateDocumentRecordParams): Promise<DocumentRecord> {
   const documentRef = doc(collection(db, DOCUMENTS_COLLECTION))
   const timestamp = serverTimestamp()
@@ -41,6 +55,11 @@ export async function createDocumentRecord({
     uid: documentRef.id,
     uid_file,
     enteredByUserId,
+    co_quan_ban_hanh,
+    ngay_thang,
+    so_ky_hieu,
+    so_to,
+    trich_yeu,
     created_at: timestamp,
     updated_at: timestamp,
   }
@@ -48,6 +67,26 @@ export async function createDocumentRecord({
   await setDoc(documentRef, documentRecord)
 
   return documentRecord
+}
+
+export async function updateDocumentRecord({
+  uid,
+  co_quan_ban_hanh,
+  ngay_thang,
+  so_ky_hieu,
+  so_to,
+  trich_yeu,
+}: UpdateDocumentRecordParams): Promise<void> {
+  const documentRef = doc(db, DOCUMENTS_COLLECTION, uid)
+
+  await updateDoc(documentRef, {
+    co_quan_ban_hanh,
+    ngay_thang,
+    so_ky_hieu,
+    so_to,
+    trich_yeu,
+    updated_at: serverTimestamp(),
+  })
 }
 
 export async function getDocumentsByUidFile(

@@ -2,7 +2,6 @@ import { FileUp, Loader2 } from 'lucide-react'
 import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
 import { ChangeEvent, FormEvent, useState } from 'react'
 import { pdfjs } from 'react-pdf'
-import { createDocumentRecord } from '../apis/document'
 import { createFileRecord } from '../apis/file'
 import { uploadPdfFiles } from '../apis/storage'
 import { useUserStore } from '../stores/userStore'
@@ -139,7 +138,7 @@ export default function UploadFile() {
           /\.pdf$/i,
           ''
         )
-        const fileRecord = await createFileRecord({
+        await createFileRecord({
           file_name: fileNameWithoutExtension,
           number_of_file: pageCount,
           number_of_file_done: 0,
@@ -149,19 +148,9 @@ export default function UploadFile() {
           }/${uploadedFile.originalName}`,
           storage_path: uploadedFile.storagePath,
           download_url: uploadedFile.downloadUrl,
-          so_ky_hieu: '',
-          ngay_thang: '',
-          tac_gia: '',
-          co_quan_ban_hanh: '',
-          trich_yeu: '',
-          so_to: 1,
           creator_uid: authUser.uid,
           updated_uid: authUser.uid,
           storage_provider: 'firebase_storage',
-        })
-
-        await createDocumentRecord({
-          uid_file: fileRecord.uid,
         })
       }
 
@@ -169,7 +158,7 @@ export default function UploadFile() {
       setPdfPageCounts({})
       setLocalFolderName('')
       setLocalSuccess(
-        `Đã upload ${pdfFiles.length} PDF và tạo hồ sơ nhập liệu thành công.`
+        `Đã upload ${pdfFiles.length} PDF và tạo file thành công.`
       )
       form.reset()
     } catch (err) {

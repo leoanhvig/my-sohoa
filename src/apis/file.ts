@@ -22,12 +22,6 @@ export interface CreateFileRecordParams {
   relative_path?: string
   storage_path?: string
   download_url?: string
-  so_ky_hieu?: string
-  ngay_thang?: string
-  tac_gia?: string
-  co_quan_ban_hanh?: string
-  trich_yeu?: string
-  so_to?: number
   creator_uid: string
   updated_uid: string
   storage_provider?: 'firebase_storage'
@@ -53,12 +47,6 @@ export interface UpdateFileRecordParams {
   relative_path?: string
   storage_path?: string
   download_url?: string
-  so_ky_hieu?: string
-  ngay_thang?: string
-  tac_gia?: string
-  co_quan_ban_hanh?: string
-  trich_yeu?: string
-  so_to?: number
 }
 
 export interface DashboardFileRecord extends FileRecord {
@@ -77,12 +65,6 @@ export async function createFileRecord({
   relative_path = '',
   storage_path = '',
   download_url = '',
-  so_ky_hieu = '',
-  ngay_thang = '',
-  tac_gia = '',
-  co_quan_ban_hanh = '',
-  trich_yeu = '',
-  so_to = 1,
   creator_uid,
   updated_uid,
   storage_provider = 'firebase_storage',
@@ -99,12 +81,6 @@ export async function createFileRecord({
     relative_path,
     storage_path,
     download_url,
-    so_ky_hieu,
-    ngay_thang,
-    tac_gia,
-    co_quan_ban_hanh,
-    trich_yeu,
-    so_to,
     creator_uid,
     updated_uid,
     storage_provider,
@@ -307,12 +283,6 @@ export async function updateFileRecordInfo({
   relative_path,
   storage_path,
   download_url,
-  so_ky_hieu,
-  ngay_thang,
-  tac_gia,
-  co_quan_ban_hanh,
-  trich_yeu,
-  so_to,
 }: UpdateFileRecordParams): Promise<void> {
   const fileRef = doc(db, FILE_COLLECTION, uid)
   const optionalPayload = Object.fromEntries(
@@ -321,12 +291,6 @@ export async function updateFileRecordInfo({
       storage_path,
       download_url,
       is_completed,
-      so_ky_hieu,
-      ngay_thang,
-      tac_gia,
-      co_quan_ban_hanh,
-      trich_yeu,
-      so_to,
     }).filter(([, value]) => value !== undefined)
   )
 

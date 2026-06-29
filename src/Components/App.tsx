@@ -28,7 +28,7 @@ function App() {
               <Route element={<Dashboard />} path="/" />
               <Route
                 element={<DocumentDetail />}
-                path="/document/:documentId"
+                path="/file/:fileId/documents"
               />
               <Route element={<Files />} path="/files" />
               <Route element={<FileDetail />} path="/file/:fileId" />

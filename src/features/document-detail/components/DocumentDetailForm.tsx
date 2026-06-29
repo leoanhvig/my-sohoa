@@ -10,6 +10,7 @@ type DocumentDetailFormProps = {
   isSubmitting: boolean
   submitLabel?: string
   submittingLabel?: string
+  onCancel?: () => void
 }
 
 export function DocumentDetailForm({
@@ -19,6 +20,7 @@ export function DocumentDetailForm({
   isSubmitting,
   submitLabel = 'lưu và thêm 1 dòng mới',
   submittingLabel = 'đang lưu...',
+  onCancel,
 }: DocumentDetailFormProps) {
   function updateField(
     field: keyof DocumentRecordFormValues,
@@ -70,6 +72,17 @@ export function DocumentDetailForm({
       </div>
 
       <div className="flex gap-3 pb-4">
+        {onCancel && (
+          <Button
+            type="button"
+            variant="outline"
+            className="h-11 flex-1 font-bold shadow"
+            disabled={isSubmitting}
+            onClick={onCancel}
+          >
+            Hủy cập nhật
+          </Button>
+        )}
         <Button
           type="submit"
           className="h-11 flex-1 bg-emerald-600 font-bold shadow hover:bg-emerald-700"

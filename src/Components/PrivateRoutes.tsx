@@ -5,7 +5,9 @@ import DashNavbar from './DashNavbar'
 export default function PrivateRoutes() {
   const { currentUser } = useAuth()
   const location = useLocation()
-  const shouldHideNavbar = location.pathname.startsWith('/document/')
+  const shouldHideNavbar =
+    location.pathname.startsWith('/document/') ||
+    /\/file\/[^/]+\/documents/.test(location.pathname)
 
   return currentUser ? (
     <>

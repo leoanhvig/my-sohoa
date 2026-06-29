@@ -1,4 +1,3 @@
-import { getDocumentsByUidFile } from '@/apis/document'
 import { claimRandomUnenteredFile } from '@/apis/file'
 import { useUserStore } from '@/stores/userStore'
 import { useQueryClient } from '@tanstack/react-query'
@@ -32,15 +31,7 @@ export function useClaimRandomDocument() {
         queryKey: ['files'],
       })
 
-      const documents = await getDocumentsByUidFile(claimedFile.uid)
-      const firstDocument = documents[0]
-
-      if (firstDocument) {
-        navigate(`/document/${firstDocument.uid}`)
-        return
-      }
-
-      navigate(`/file/${claimedFile.uid}`)
+      navigate(`/file/${claimedFile.uid}/documents`)
     } catch (err) {
       const message =
         err instanceof Error ? err.message : 'Không thể nhận hồ sơ.'

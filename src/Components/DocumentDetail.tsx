@@ -1,4 +1,10 @@
-import { getDocumentByUid } from '@/apis/document'
+import {
+  createDocumentRecord,
+  getDocumentByUid,
+  getDocumentsByUidFile,
+  updateDocumentRecord,
+  type DocumentRecord,
+} from '@/apis/document'
 import { getFileRecordsByIds } from '@/apis/file'
 import { EToastTypes, useToast } from '@/contexts/ToastContext'
 import { DocumentDetailHeader } from '@/features/document-detail/components/DocumentDetailHeader'
@@ -7,7 +13,7 @@ import { DocumentRecordPanel } from '@/features/document-detail/components/Docum
 import type { DocumentRecordFormValues } from '@/features/document-detail/types'
 import { getPreviewUrl } from '@/features/document-detail/utils'
 import { useUpdateFileRecord } from '@/hooks/useUpdateFileRecord'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 
@@ -30,11 +36,18 @@ function getNextSoKyHieu(soKyHieu: string): string {
 }
 
 export default function DocumentDetail() {
-  const { documentId } = useParams<{ documentId: string }>()
+  const { documentId, fileId } = useParams<{
+    documentId?: string
+    fileId?: string
+  }>()
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const [recordFormKey, setRecordFormKey] = useState(0)
   const [nextFormValues, setNextFormValues] =
     useState<DocumentRecordFormValues | null>(null)
+  const [editingDocument, setEditingDocument] =
+    useState<DocumentRecord | null>(null)
+  const [isSavingDocument, setIsSavingDocument] = useState(false)
   const { showTypedToast } = useToast()
   const { updateFileRecord, isUpdatingFileRecord } = useUpdateFileRecord()
   const {
@@ -46,23 +59,31 @@ export default function DocumentDetail() {
     queryFn: () => getDocumentByUid(documentId || ''),
     enabled: Boolean(documentId),
   })
+  const fileUid = fileId || documentRecord?.uid_file || ''
+  const {
+    data: documentRecords = [],
+    isLoading: isLoadingDocuments,
+    error: documentsError,
+  } = useQuery({
+    queryKey: ['documents', 'by-file', fileUid],
+    queryFn: () => getDocumentsByUidFile(fileUid),
+    enabled: Boolean(fileUid),
+  })
   const {
     data: fileRecords = [],
     isLoading: isLoadingFile,
     error: fileError,
   } = useQuery({
-    queryKey: ['files', 'detail', documentRecord?.uid_file],
-    queryFn: () =>
-      getFileRecordsByIds(
-        documentRecord?.uid_file ? [documentRecord.uid_file] : []
-      ),
-    enabled: Boolean(documentRecord?.uid_file),
+    queryKey: ['files', 'detail', fileUid],
+    queryFn: () => getFileRecordsByIds(fileUid ? [fileUid] : []),
+    enabled: Boolean(fileUid),
   })
   const fileRecord = fileRecords[0] || null
 
   useEffect(() => {
     setNextFormValues(null)
-  }, [documentId])
+    setEditingDocument(null)
+  }, [documentId, fileId])
 
   const previewUrl = getPreviewUrl(fileRecord)
   const formInitialValues = useMemo<
@@ -76,14 +97,32 @@ export default function DocumentDetail() {
       return undefined
     }
 
+    const latestDocumentRecord = documentRecords[documentRecords.length - 1]
+
     return {
-      soKyHieu: fileRecord.so_ky_hieu || '',
-      ngayThang: fileRecord.ngay_thang || '',
-      coQuanBanHanh: fileRecord.co_quan_ban_hanh || fileRecord.tac_gia || '',
-      trichYeu: fileRecord.trich_yeu || '',
-      soTo: fileRecord.so_to ? String(fileRecord.so_to) : '',
+      soKyHieu: latestDocumentRecord?.so_ky_hieu || '',
+      ngayThang: latestDocumentRecord?.ngay_thang || '',
+      coQuanBanHanh: latestDocumentRecord?.co_quan_ban_hanh || '',
+      trichYeu: latestDocumentRecord?.trich_yeu || '',
+      soTo: latestDocumentRecord?.so_to
+        ? String(latestDocumentRecord.so_to)
+        : '',
     }
-  }, [fileRecord, nextFormValues])
+  }, [documentRecords, fileRecord, nextFormValues])
+
+  const updateInitialValues = useMemo<DocumentRecordFormValues | undefined>(() => {
+    if (!editingDocument) {
+      return undefined
+    }
+
+    return {
+      soKyHieu: editingDocument.so_ky_hieu || '',
+      ngayThang: editingDocument.ngay_thang || '',
+      coQuanBanHanh: editingDocument.co_quan_ban_hanh || '',
+      trichYeu: editingDocument.trich_yeu || '',
+      soTo: editingDocument.so_to ? String(editingDocument.so_to) : '',
+    }
+  }, [editingDocument])
 
   async function handleApprove(values: DocumentRecordFormValues) {
     if (!fileRecord) return
@@ -94,38 +133,73 @@ export default function DocumentDetail() {
     )
     const isFileCompleted = totalPages > 0 && nextDonePages >= totalPages
 
-    await updateFileRecord({
-      uid: fileRecord.uid,
-      file_name: fileRecord.file_name,
-      number_of_file: totalPages,
-      number_of_file_done: nextDonePages,
-      is_completed: isFileCompleted,
-      creator_uid: fileRecord.creator_uid,
-      updated_uid: fileRecord.updated_uid,
-      storage_provider: fileRecord.storage_provider || 'firebase_storage',
-      relative_path: fileRecord.relative_path,
-      storage_path: fileRecord.storage_path,
-      download_url: fileRecord.download_url,
-      so_ky_hieu: values.soKyHieu,
-      ngay_thang: values.ngayThang,
-      tac_gia: values.coQuanBanHanh,
-      co_quan_ban_hanh: values.coQuanBanHanh,
-      trich_yeu: values.trichYeu,
-      so_to: Number(values.soTo || 1),
-    })
-    setNextFormValues({
-      ...values,
-      soKyHieu: getNextSoKyHieu(values.soKyHieu),
-      ngayThang: '',
-      trichYeu: '',
-    })
-    if (isFileCompleted) {
-      showTypedToast(
-        EToastTypes.SUCCESS,
-        `File ${fileRecord.file_name} đã nhập hoàn thành`
-      )
+    try {
+      setIsSavingDocument(true)
+      await createDocumentRecord({
+        uid_file: fileRecord.uid,
+        enteredByUserId: fileRecord.enteredByUserId,
+        co_quan_ban_hanh: values.coQuanBanHanh,
+        ngay_thang: values.ngayThang,
+        so_ky_hieu: values.soKyHieu,
+        so_to: Number(values.soTo || 1),
+        trich_yeu: values.trichYeu,
+      })
+
+      await updateFileRecord({
+        uid: fileRecord.uid,
+        file_name: fileRecord.file_name,
+        number_of_file: totalPages,
+        number_of_file_done: nextDonePages,
+        is_completed: isFileCompleted,
+        creator_uid: fileRecord.creator_uid,
+        updated_uid: fileRecord.updated_uid,
+        storage_provider: fileRecord.storage_provider || 'firebase_storage',
+        relative_path: fileRecord.relative_path,
+        storage_path: fileRecord.storage_path,
+        download_url: fileRecord.download_url,
+      })
+      await queryClient.invalidateQueries({
+        queryKey: ['documents', 'by-file', fileRecord.uid],
+      })
+      setNextFormValues({
+        ...values,
+        soKyHieu: getNextSoKyHieu(values.soKyHieu),
+        ngayThang: '',
+        trichYeu: '',
+      })
+      if (isFileCompleted) {
+        showTypedToast(
+          EToastTypes.SUCCESS,
+          `File ${fileRecord.file_name} đã nhập hoàn thành`
+        )
+      }
+      setRecordFormKey((key) => key + 1)
+    } finally {
+      setIsSavingDocument(false)
     }
-    setRecordFormKey((key) => key + 1)
+  }
+
+  async function handleUpdate(values: DocumentRecordFormValues) {
+    if (!editingDocument) return
+
+    try {
+      setIsSavingDocument(true)
+      await updateDocumentRecord({
+        uid: editingDocument.uid,
+        co_quan_ban_hanh: values.coQuanBanHanh,
+        ngay_thang: values.ngayThang,
+        so_ky_hieu: values.soKyHieu,
+        so_to: Number(values.soTo || 1),
+        trich_yeu: values.trichYeu,
+      })
+      await queryClient.invalidateQueries({
+        queryKey: ['documents', 'by-file', editingDocument.uid_file],
+      })
+      setEditingDocument(null)
+      setRecordFormKey((key) => key + 1)
+    } finally {
+      setIsSavingDocument(false)
+    }
   }
 
   return (
@@ -140,15 +214,21 @@ export default function DocumentDetail() {
         <DocumentPreviewPane
           fileRecord={fileRecord}
           previewUrl={previewUrl}
-          isLoading={isLoading || isLoadingFile}
-          error={error || fileError}
+          isLoading={isLoading || isLoadingFile || isLoadingDocuments}
+          error={error || fileError || documentsError}
         />
         <DocumentRecordPanel
           formKey={recordFormKey}
           resetKey={fileRecord?.uid}
           initialValues={formInitialValues}
+          editingDocument={editingDocument}
+          updateInitialValues={updateInitialValues}
+          documents={documentRecords}
           onApprove={handleApprove}
-          isSaving={isUpdatingFileRecord}
+          onUpdate={handleUpdate}
+          onStartUpdate={setEditingDocument}
+          onCancelUpdate={() => setEditingDocument(null)}
+          isSaving={isUpdatingFileRecord || isSavingDocument}
         />
       </div>
     </main>
