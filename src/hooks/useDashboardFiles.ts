@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useState } from 'react'
-import { DocumentRecord, getDocumentsByEnteredUser } from '../apis/document'
+import { FileRecord, getDashboardFilesByUser } from '../apis/file'
 
-export interface DashboardFile extends DocumentRecord {
+export interface DashboardFile extends FileRecord {
   isClaimedByCurrentUser: boolean
   isUnassigned: boolean
+  is_completed?: boolean
 }
 
 export function useDashboardFiles(userUid?: string) {
@@ -21,14 +22,17 @@ export function useDashboardFiles(userUid?: string) {
       setLoading(true)
       setError('')
 
-      const documentRecords = await getDocumentsByEnteredUser(userUid)
-      const filesWithCompletedCount = documentRecords.map((document) => ({
-        ...document,
-        isClaimedByCurrentUser: document.enteredByUserId === userUid,
-        isUnassigned: !document.enteredByUserId,
+      const fileRecords = await getDashboardFilesByUser(userUid)
+      const dashboardFiles = fileRecords.map((file) => ({
+        ...file,
+        is_completed:
+          file.number_of_file > 0 &&
+          (file.number_of_file_done || 0) >= file.number_of_file,
+        isClaimedByCurrentUser: file.enteredByUserId === userUid,
+        isUnassigned: !file.enteredByUserId,
       }))
 
-      setFiles(filesWithCompletedCount)
+      setFiles(dashboardFiles)
     } catch (err) {
       const message =
         err instanceof Error ? err.message : 'Failed to load files.'

@@ -6,6 +6,7 @@ export interface CreateDocumentRecordParams {
   so_ky_hieu?: string
   ngay_thang?: string
   tac_gia?: string
+  co_quan_ban_hanh?: string
   trich_yeu?: string
   so_to?: number
   file_name: string
@@ -22,6 +23,7 @@ export interface DocumentRecord {
   so_ky_hieu: string
   ngay_thang: string
   tac_gia: string
+  co_quan_ban_hanh: string
   trich_yeu: string
   so_to: number
   file_name: string

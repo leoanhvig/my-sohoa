@@ -1,5 +1,7 @@
 import { FileUp, Loader2 } from 'lucide-react'
+import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
 import { ChangeEvent, FormEvent, useState } from 'react'
+import { pdfjs } from 'react-pdf'
 import { createDocumentRecord } from '../apis/document'
 import { createFileRecord } from '../apis/file'
 import { uploadPdfFiles } from '../apis/storage'
@@ -7,21 +9,52 @@ import { useUserStore } from '../stores/userStore'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
 
+pdfjs.GlobalWorkerOptions.workerSrc = pdfWorkerUrl
+
+const MAX_PDF_FILE_SIZE_MB = 1024
+const MAX_PDF_FILE_SIZE_BYTES = MAX_PDF_FILE_SIZE_MB * 1024 * 1024
+
+function getPdfFileKey(file: File): string {
+  return `${file.name}-${file.size}-${file.lastModified}`
+}
+
+async function getPdfPageCount(file: File): Promise<number> {
+  const arrayBuffer = await file.arrayBuffer()
+  const loadingTask = pdfjs.getDocument({ data: new Uint8Array(arrayBuffer) })
+  const pdfDocument = await loadingTask.promise
+
+  return pdfDocument.numPages
+}
+
 export default function UploadFile() {
   const authUser = useUserStore((state) => state.authUser)
   const [localFolderName, setLocalFolderName] = useState('')
   const [pdfFiles, setPdfFiles] = useState<File[]>([])
+  const [pdfPageCounts, setPdfPageCounts] = useState<Record<string, number>>({})
+  const [readingPdfPages, setReadingPdfPages] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [localError, setLocalError] = useState('')
   const [localSuccess, setLocalSuccess] = useState('')
 
-  function handlePdfFilesChange(event: ChangeEvent<HTMLInputElement>) {
+  const totalPdfPages = pdfFiles.reduce(
+    (totalPages, file) =>
+      totalPages + (pdfPageCounts[getPdfFileKey(file)] || 0),
+    0
+  )
+
+  async function handlePdfFilesChange(event: ChangeEvent<HTMLInputElement>) {
     const selectedFiles = Array.from(event.target.files || [])
     const validPdfFiles = selectedFiles.filter(
-      (file) => file.type === 'application/pdf' || file.name.endsWith('.pdf')
+      (file) =>
+        file.type === 'application/pdf' ||
+        file.name.toLowerCase().endsWith('.pdf')
     )
 
     setPdfFiles(validPdfFiles)
+    setPdfPageCounts({})
+    if (validPdfFiles.length > 0) {
+      setLocalFolderName(validPdfFiles[0].name.replace(/\.pdf$/i, ''))
+    }
     setLocalSuccess('')
 
     if (selectedFiles.length !== validPdfFiles.length) {
@@ -29,7 +62,44 @@ export default function UploadFile() {
       return
     }
 
+    const oversizedFile = validPdfFiles.find(
+      (file) => file.size > MAX_PDF_FILE_SIZE_BYTES
+    )
+
+    if (oversizedFile) {
+      setPdfFiles([])
+      setPdfPageCounts({})
+      setLocalError(
+        `File "${oversizedFile.name}" quá lớn. Giới hạn hiện tại là ${MAX_PDF_FILE_SIZE_MB}MB mỗi file.`
+      )
+      return
+    }
+
     setLocalError('')
+
+    if (validPdfFiles.length === 0) {
+      return
+    }
+
+    try {
+      setReadingPdfPages(true)
+      const pageCountEntries = await Promise.all(
+        validPdfFiles.map(async (file) => [
+          getPdfFileKey(file),
+          await getPdfPageCount(file),
+        ])
+      )
+
+      setPdfPageCounts(Object.fromEntries(pageCountEntries))
+    } catch (err) {
+      setLocalError(
+        err instanceof Error
+          ? `Không đọc được số trang PDF: ${err.message}`
+          : 'Không đọc được số trang PDF.'
+      )
+    } finally {
+      setReadingPdfPages(false)
+    }
   }
 
   async function handleUploadLocalPdf(event: FormEvent<HTMLFormElement>) {
@@ -46,6 +116,11 @@ export default function UploadFile() {
       return
     }
 
+    if (readingPdfPages) {
+      setLocalError('Đang đọc số trang PDF, vui lòng chờ trong giây lát.')
+      return
+    }
+
     try {
       setUploading(true)
       setLocalError('')
@@ -55,7 +130,8 @@ export default function UploadFile() {
         file_name:
           localFolderName.trim() ||
           `PDF upload ${new Date().toLocaleString('vi-VN')}`,
-        number_of_file: pdfFiles.length,
+        number_of_file: totalPdfPages || pdfFiles.length,
+        enteredByUserId: '',
         creator_uid: authUser.uid,
         updated_uid: authUser.uid,
         storage_provider: 'firebase_storage',
@@ -67,6 +143,12 @@ export default function UploadFile() {
           uid_file: fileRecord.uid,
           file_name: uploadedFile.originalName,
           relative_path: `${fileRecord.file_name}/${uploadedFile.originalName}`,
+          so_ky_hieu: '',
+          ngay_thang: '',
+          tac_gia: '',
+          co_quan_ban_hanh: '',
+          trich_yeu: '',
+          so_to: 1,
           storage_path: uploadedFile.storagePath,
           download_url: uploadedFile.downloadUrl,
           storage_provider: 'firebase_storage',
@@ -74,6 +156,7 @@ export default function UploadFile() {
       }
 
       setPdfFiles([])
+      setPdfPageCounts({})
       setLocalFolderName('')
       setLocalSuccess(
         `Đã upload ${pdfFiles.length} PDF và tạo hồ sơ nhập liệu thành công.`
@@ -142,7 +225,34 @@ export default function UploadFile() {
                   {pdfFiles.length}
                 </span>{' '}
                 file PDF.
+                {readingPdfPages && ' Đang đọc số trang...'}
               </p>
+              {pdfFiles.length > 0 && !readingPdfPages && (
+                <div className="rounded-md border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600">
+                  <p className="font-semibold text-slate-700">
+                    Gợi ý số trang sẽ lưu vào database:
+                  </p>
+                  <p className="mt-1 font-bold text-indigo-700">
+                    Tổng số trang: {totalPdfPages || 'Chưa đọc được'}
+                  </p>
+                  <ul className="mt-2 space-y-1">
+                    {pdfFiles.map((file) => {
+                      const pageCount = pdfPageCounts[getPdfFileKey(file)]
+
+                      return (
+                        <li key={getPdfFileKey(file)} className="flex gap-2">
+                          <span className="min-w-0 flex-1 truncate">
+                            {file.name}
+                          </span>
+                          <span className="font-bold text-indigo-700">
+                            {pageCount ? `${pageCount} trang` : 'Chưa đọc được'}
+                          </span>
+                        </li>
+                      )
+                    })}
+                  </ul>
+                </div>
+              )}
             </div>
 
             {localError && (
@@ -159,13 +269,13 @@ export default function UploadFile() {
 
             <Button
               type="submit"
-              disabled={uploading}
+              disabled={uploading || readingPdfPages}
               className="w-full bg-indigo-600 text-white hover:bg-indigo-700"
             >
-              {uploading ? (
+              {uploading || readingPdfPages ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Đang
-                  upload...
+                  {readingPdfPages ? ' đọc số trang...' : ' upload...'}
                 </>
               ) : (
                 <>

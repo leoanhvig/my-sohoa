@@ -1,4 +1,4 @@
-import { claimDocumentRecord } from '@/apis/document'
+import { claimFileRecord } from '@/apis/file'
 import { DashboardFile, useDashboardFiles } from '@/hooks/useDashboardFiles'
 import { useUserStore } from '@/stores/userStore'
 import { useQueryClient } from '@tanstack/react-query'
@@ -20,7 +20,7 @@ export default function DashboardPage() {
 
   const handleViewFile = useCallback(
     (fileUid: string) => {
-      navigate(`/document/${fileUid}`)
+      navigate(`/file/${fileUid}`)
     },
     [navigate]
   )
@@ -31,13 +31,13 @@ export default function DashboardPage() {
 
       try {
         setClaimingFileUid(file.uid)
-        await claimDocumentRecord({
-          documentUid: file.uid,
+        await claimFileRecord({
+          fileUid: file.uid,
           userUid: authUser.uid,
         })
         await refetch()
         await queryClient.invalidateQueries({
-          queryKey: ['documents'],
+          queryKey: ['files'],
         })
         handleViewFile(file.uid)
       } finally {

@@ -62,6 +62,7 @@ export type UpdateDocumentRecordInfoParams = {
   so_ky_hieu: string
   ngay_thang: string
   tac_gia: string
+  co_quan_ban_hanh?: string
   trich_yeu: string
   so_to: number
 }
@@ -169,6 +170,7 @@ export async function updateDocumentRecordInfo({
   so_ky_hieu,
   ngay_thang,
   tac_gia,
+  co_quan_ban_hanh = '',
   trich_yeu,
   so_to,
 }: UpdateDocumentRecordInfoParams): Promise<void> {
@@ -178,6 +180,7 @@ export async function updateDocumentRecordInfo({
     so_ky_hieu,
     ngay_thang,
     tac_gia,
+    co_quan_ban_hanh,
     trich_yeu,
     so_to,
     updated_at: serverTimestamp(),
@@ -190,8 +193,9 @@ export async function createDocumentRecord({
   so_ky_hieu = '',
   ngay_thang = '',
   tac_gia = '',
+  co_quan_ban_hanh = '',
   trich_yeu = '',
-  so_to = 0,
+  so_to = 1,
   file_name,
   relative_path = '',
   storage_path = '',
@@ -207,6 +211,7 @@ export async function createDocumentRecord({
     so_ky_hieu,
     ngay_thang,
     tac_gia,
+    co_quan_ban_hanh,
     trich_yeu,
     so_to,
     file_name,

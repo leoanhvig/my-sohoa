@@ -16,13 +16,16 @@ export interface CreateFileRecordParams {
   file_name: string
   number_of_file: number
   number_of_file_done?: number
+  enteredByUserId?: string
   creator_uid: string
   updated_uid: string
   storage_provider?: 'firebase_storage'
 }
 
-export interface FileRecord extends CreateFileRecordParams {
+export interface FileRecord
+  extends Omit<CreateFileRecordParams, 'enteredByUserId'> {
   uid: string
+  enteredByUserId: string
   created_at: ReturnType<typeof serverTimestamp>
   updated_at: ReturnType<typeof serverTimestamp>
 }
@@ -41,12 +44,13 @@ export interface DashboardFileRecord extends FileRecord {
   completed_file_count: number
 }
 
-const FILE_COLLECTION = 'File'
+const FILE_COLLECTION = 'Files'
 
 export async function createFileRecord({
   file_name,
   number_of_file,
   number_of_file_done = 0,
+  enteredByUserId = '',
   creator_uid,
   updated_uid,
   storage_provider = 'firebase_storage',
@@ -58,6 +62,7 @@ export async function createFileRecord({
     file_name,
     number_of_file,
     number_of_file_done,
+    enteredByUserId,
     creator_uid,
     updated_uid,
     storage_provider,
@@ -99,8 +104,8 @@ export async function getAssignableFilesByUser(
 ): Promise<FileRecord[]> {
   const filesCollection = collection(db, FILE_COLLECTION)
   const [unassignedSnapshot, assignedSnapshot] = await Promise.all([
-    getDocs(query(filesCollection, where('updated_uid', '==', ''))),
-    getDocs(query(filesCollection, where('updated_uid', '==', userUid))),
+    getDocs(query(filesCollection, where('enteredByUserId', '==', ''))),
+    getDocs(query(filesCollection, where('enteredByUserId', '==', userUid))),
   ])
 
   return [...unassignedSnapshot.docs, ...assignedSnapshot.docs].map(
@@ -114,7 +119,7 @@ export async function getFilesWithoutUpdatedUid(): Promise<FileRecord[]> {
 
   return snapshot.docs
     .map((file) => file.data() as FileRecord)
-    .filter((file) => !file.updated_uid)
+    .filter((file) => !file.enteredByUserId)
 }
 
 export async function getDashboardFilesByUser(
@@ -148,13 +153,34 @@ export async function getDoneFilesCountByUser(
 
   const filesCollection = collection(db, FILE_COLLECTION)
   const snapshot = await getDocs(
-    query(filesCollection, where('updated_uid', '==', userUid))
+    query(filesCollection, where('enteredByUserId', '==', userUid))
   )
 
   return snapshot.docs.reduce((total, file) => {
     const fileRecord = file.data() as FileRecord
 
     return total + (fileRecord.number_of_file_done || 0)
+  }, 0)
+}
+
+export async function getUncompletedFilesCountByUser(
+  userUid: string
+): Promise<number> {
+  if (!userUid) {
+    return 0
+  }
+
+  const filesCollection = collection(db, FILE_COLLECTION)
+  const snapshot = await getDocs(
+    query(filesCollection, where('enteredByUserId', '==', userUid))
+  )
+
+  return snapshot.docs.reduce((total, file) => {
+    const fileRecord = file.data() as FileRecord
+    const totalPages = fileRecord.number_of_file || 0
+    const donePages = fileRecord.number_of_file_done || 0
+
+    return totalPages === 0 || donePages < totalPages ? total + 1 : total
   }, 0)
 }
 
@@ -168,6 +194,7 @@ export async function claimFileRecord({
   const fileRef = doc(db, FILE_COLLECTION, fileUid)
 
   await updateDoc(fileRef, {
+    enteredByUserId: userUid,
     updated_uid: userUid,
     updated_at: serverTimestamp(),
   })

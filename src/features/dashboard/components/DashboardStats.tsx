@@ -1,8 +1,8 @@
 import {
-  getDocumentDetailsCountByCreator,
-  getUncompletedDocumentsCountByEnteredUser,
-  getUnenteredDocumentsCount,
-} from '@/apis/document'
+  getDoneFilesCountByUser,
+  getUnassignedFilesCount,
+  getUncompletedFilesCountByUser,
+} from '@/apis/file'
 import StatsCard from '@/Components/StatsCard'
 import { Button } from '@/Components/ui/button'
 import { useUserStore } from '@/stores/userStore'
@@ -15,21 +15,20 @@ export function DashboardStats() {
   const { claimRandomDocument, isClaiming, error } = useClaimRandomDocument()
   const { data: totalDocumentDetails = 0, isLoading: loadingTotalFiles } =
     useQuery({
-      queryKey: ['DocumentDetails', 'creator-count', authUser?.uid],
-      queryFn: () => getDocumentDetailsCountByCreator(authUser?.uid || ''),
+      queryKey: ['files', 'done-count', authUser?.uid],
+      queryFn: () => getDoneFilesCountByUser(authUser?.uid || ''),
       enabled: Boolean(authUser?.uid),
     })
   const {
     data: unassignedFilesCount = 0,
     isLoading: loadingUnassignedFilesCount,
   } = useQuery({
-    queryKey: ['documents', 'unentered-count'],
-    queryFn: getUnenteredDocumentsCount,
+    queryKey: ['files', 'unassigned-count'],
+    queryFn: getUnassignedFilesCount,
   })
   const { data: uncompletedFilesCount = 0 } = useQuery({
-    queryKey: ['documents', 'uncompleted-count', authUser?.uid],
-    queryFn: () =>
-      getUncompletedDocumentsCountByEnteredUser(authUser?.uid || ''),
+    queryKey: ['files', 'uncompleted-count', authUser?.uid],
+    queryFn: () => getUncompletedFilesCountByUser(authUser?.uid || ''),
     enabled: Boolean(authUser?.uid),
   })
   const canClaimRandomDocument =

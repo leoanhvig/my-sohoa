@@ -47,11 +47,12 @@ export function DashboardFilesTable({
         ),
       },
       {
-        accessorKey: 'relative_path',
-        header: 'Đường dẫn',
+        accessorKey: 'number_of_file',
+        header: 'Tiến độ',
         cell: ({ row }) => (
           <span className="font-semibold text-slate-700">
-            {row.original.relative_path || row.original.file_name}
+            {row.original.number_of_file_done || 0}/
+            {row.original.number_of_file || 0} trang
           </span>
         ),
       },

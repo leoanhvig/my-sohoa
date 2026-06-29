@@ -9,13 +9,9 @@ import Dashboard from './Dashboard'
 import DocumentDetail from './DocumentDetail'
 import FileDetail from './FileDetail'
 import Files from './Files'
-import ForgotPassword from './ForgotPassword'
-import HealthForm from './HealthForm'
-import HealthFormList from './HealthFormList'
 import Login from './Login'
 import PrivateRoutes from './PrivateRoutes'
 import Signup from './Signup'
-import UpdateProfile from './UpdateProfile'
 import UploadFile from './UploadFile'
 import UploadedFiles from './UploadedFiles'
 
@@ -36,19 +32,19 @@ function App() {
               />
               <Route element={<Files />} path="/files" />
               <Route element={<FileDetail />} path="/file/:fileId" />
-              <Route element={<HealthForm />} path="/health-form" />
+              {/* <Route element={<HealthForm />} path="/health-form" />
               <Route
                 element={<HealthForm />}
                 path="/health-form/update/:recordId"
-              />
-              <Route element={<HealthFormList />} path="/list-healthform" />
-              <Route path="/update-profile" element={<UpdateProfile />} />
+              /> */}
+              {/* <Route element={<HealthFormList />} path="/list-healthform" /> */}
+              {/* <Route path="/update-profile" element={<UpdateProfile />} /> */}
               <Route path="/upload" element={<UploadFile />} />
               <Route path="/uploaded-files" element={<UploadedFiles />} />
             </Route>
             <Route path="/signup" element={<Signup />} />
             <Route path="/login" element={<Login />} />
-            <Route path="/forgot-password" element={<ForgotPassword />} />
+            {/* <Route path="/forgot-password" element={<ForgotPassword />} /> */}
           </Routes>
         </AppContextProviders>
       </Router>

@@ -13,7 +13,7 @@ const app = express()
 const port = Number(process.env.PORT || 4000)
 const uploadsRoot = path.resolve(process.env.UPLOADS_DIR || 'server/uploads')
 const pdfUploadsDir = path.join(uploadsRoot, 'pdf')
-const maxUploadFileSizeMb = Number(process.env.MAX_UPLOAD_FILE_SIZE_MB || 200)
+const maxUploadFileSizeMb = Number(process.env.MAX_UPLOAD_FILE_SIZE_MB || 1024)
 
 fs.mkdirSync(pdfUploadsDir, { recursive: true })
 
