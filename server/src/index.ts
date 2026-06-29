@@ -42,7 +42,9 @@ const pdfUpload = multer({
       const uniquePrefix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`
       callback(
         null,
-        `${uniquePrefix}-${sanitizeFileName(getDisplayFileName(file.originalname))}`
+        `${uniquePrefix}-${sanitizeFileName(
+          getDisplayFileName(file.originalname)
+        )}`
       )
     },
   }),

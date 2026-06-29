@@ -6,6 +6,7 @@ import {
   type DocumentRecord,
 } from '@/apis/document'
 import { getFileRecordsByIds } from '@/apis/file'
+import { Button } from '@/Components/ui/button'
 import { EToastTypes, useToast } from '@/contexts/ToastContext'
 import { DocumentDetailHeader } from '@/features/document-detail/components/DocumentDetailHeader'
 import { DocumentPreviewPane } from '@/features/document-detail/components/DocumentPreviewPane'
@@ -14,9 +15,9 @@ import type { DocumentRecordFormValues } from '@/features/document-detail/types'
 import { getPreviewUrl } from '@/features/document-detail/utils'
 import { useUpdateFileRecord } from '@/hooks/useUpdateFileRecord'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { Loader2 } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { Loader2, UploadCloud } from 'lucide-react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 
 function getNextSoKyHieu(soKyHieu: string): string {
   const match = soKyHieu.match(/\d+/)
@@ -36,12 +37,20 @@ function getNextSoKyHieu(soKyHieu: string): string {
   )}`
 }
 
+function normalizePdfFileName(fileName: string): string {
+  return fileName
+    .trim()
+    .toLowerCase()
+    .replace(/\.pdf$/i, '')
+}
+
 export default function DocumentDetail() {
   const { documentId, fileId } = useParams<{
     documentId?: string
     fileId?: string
   }>()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const queryClient = useQueryClient()
   const [recordFormKey, setRecordFormKey] = useState(0)
   const [nextFormValues, setNextFormValues] =
@@ -50,9 +59,14 @@ export default function DocumentDetail() {
     null
   )
   const [previewPage, setPreviewPage] = useState<number | null>(null)
+  const [localPreviewUrl, setLocalPreviewUrl] = useState('')
   const [isSavingDocument, setIsSavingDocument] = useState(false)
+  const uploadInputRef = useRef<HTMLInputElement | null>(null)
   const { showTypedToast } = useToast()
   const { updateFileRecord, isUpdatingFileRecord } = useUpdateFileRecord()
+  const shouldShowUploadPdfButton =
+    searchParams.get('uploadFile') === 'true' ||
+    searchParams.get('upload_file') === 'true'
   const {
     data: documentRecord,
     isLoading,
@@ -87,7 +101,16 @@ export default function DocumentDetail() {
     setNextFormValues(null)
     setEditingDocument(null)
     setPreviewPage(null)
+    setLocalPreviewUrl('')
   }, [documentId, fileId])
+
+  useEffect(() => {
+    return () => {
+      if (localPreviewUrl) {
+        URL.revokeObjectURL(localPreviewUrl)
+      }
+    }
+  }, [localPreviewUrl])
 
   useEffect(() => {
     if (!fileUid || isLoadingDocuments || previewPage !== null) {
@@ -116,6 +139,7 @@ export default function DocumentDetail() {
   }, [fileError])
 
   const previewUrl = getPreviewUrl(fileRecord)
+  const effectivePreviewUrl = shouldShowUploadPdfButton ? '' : previewUrl
   const formInitialValues = useMemo<
     DocumentRecordFormValues | undefined
   >(() => {
@@ -223,6 +247,44 @@ export default function DocumentDetail() {
     }
   }
 
+  function handleLocalPdfChange(event: React.ChangeEvent<HTMLInputElement>) {
+    const selectedFile = event.target.files?.[0]
+    event.target.value = ''
+
+    if (!selectedFile || !fileRecord) {
+      return
+    }
+
+    if (
+      normalizePdfFileName(selectedFile.name) !==
+      normalizePdfFileName(fileRecord.file_name)
+    ) {
+      showTypedToast(
+        EToastTypes.ERROR,
+        `Tên file không khớp. Vui lòng chọn đúng file ${fileRecord.file_name}.pdf.`
+      )
+      return
+    }
+
+    if (
+      selectedFile.type !== 'application/pdf' &&
+      !selectedFile.name.toLowerCase().endsWith('.pdf')
+    ) {
+      showTypedToast(EToastTypes.ERROR, 'Vui lòng chọn file PDF.')
+      return
+    }
+
+    const objectUrl = URL.createObjectURL(selectedFile)
+    setLocalPreviewUrl((currentUrl) => {
+      if (currentUrl) {
+        URL.revokeObjectURL(currentUrl)
+      }
+
+      return objectUrl
+    })
+    showTypedToast(EToastTypes.SUCCESS, 'Đã tải PDF từ máy để xem trước.')
+  }
+
   return (
     <main className="flex h-screen flex-col overflow-hidden bg-slate-100 text-slate-900">
       <DocumentDetailHeader
@@ -232,13 +294,34 @@ export default function DocumentDetail() {
       />
 
       <div className="grid min-h-0 flex-1 grid-cols-1 md:grid-cols-[minmax(0,2fr)_minmax(380px,1fr)]">
-        <DocumentPreviewPane
-          fileRecord={fileRecord}
-          previewUrl={previewUrl}
-          isLoading={isLoading || isLoadingFile || isLoadingDocuments}
-          error={error || fileError || documentsError}
-          page={previewPage ?? 0}
-        />
+        <div className="relative min-h-0">
+          {shouldShowUploadPdfButton && !localPreviewUrl && (
+            <>
+              <input
+                ref={uploadInputRef}
+                type="file"
+                accept="application/pdf,.pdf"
+                className="hidden"
+                onChange={handleLocalPdfChange}
+              />
+              <Button
+                type="button"
+                className="absolute right-4 top-4 z-10 bg-indigo-600 font-bold text-white shadow-lg hover:bg-indigo-700"
+                onClick={() => uploadInputRef.current?.click()}
+              >
+                <UploadCloud className="mr-2 h-4 w-4" /> Upload PDF
+              </Button>
+            </>
+          )}
+          <DocumentPreviewPane
+            fileRecord={fileRecord}
+            previewUrl={effectivePreviewUrl}
+            localPreviewUrl={localPreviewUrl}
+            isLoading={isLoading || isLoadingFile || isLoadingDocuments}
+            error={error || fileError || documentsError}
+            page={previewPage ?? 0}
+          />
+        </div>
         {isLoadingDocuments ? (
           <aside className="flex min-h-0 items-center justify-center bg-slate-50 p-4 text-sm font-semibold text-slate-500 md:p-6">
             <Loader2 className="mr-2 h-5 w-5 animate-spin" /> Đang tải
