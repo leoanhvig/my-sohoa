@@ -15,10 +15,13 @@ export interface SyncDriveFolderResponse {
 }
 
 export function getDriveFileContentUrl(fileId: string): string {
-  const apiBaseUrl =
-    import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000'
+  const apiBaseUrl = getApiBaseUrl()
 
   return `${apiBaseUrl}/api/drive/files/${encodeURIComponent(fileId)}/content`
+}
+
+export function getApiBaseUrl(): string {
+  return import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000'
 }
 
 export async function getAuthorizationHeader(): Promise<
@@ -27,7 +30,7 @@ export async function getAuthorizationHeader(): Promise<
   const token = await auth.currentUser?.getIdToken()
 
   if (!token) {
-    throw new Error('You must be logged in to load Google Drive file content.')
+    throw new Error('You must be logged in to load file content.')
   }
 
   return {

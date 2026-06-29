@@ -17,6 +17,7 @@ import PrivateRoutes from './PrivateRoutes'
 import Signup from './Signup'
 import UpdateProfile from './UpdateProfile'
 import UploadFile from './UploadFile'
+import UploadedFiles from './UploadedFiles'
 
 const queryClient = new QueryClient()
 
@@ -43,6 +44,7 @@ function App() {
               <Route element={<HealthFormList />} path="/list-healthform" />
               <Route path="/update-profile" element={<UpdateProfile />} />
               <Route path="/upload" element={<UploadFile />} />
+              <Route path="/uploaded-files" element={<UploadedFiles />} />
             </Route>
             <Route path="/signup" element={<Signup />} />
             <Route path="/login" element={<Login />} />

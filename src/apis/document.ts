@@ -57,6 +57,15 @@ export type UpdateDocumentInfoParams = Pick<
   | 'soTo'
 >
 
+export type UpdateDocumentRecordInfoParams = {
+  uid: string
+  so_ky_hieu: string
+  ngay_thang: string
+  tac_gia: string
+  trich_yeu: string
+  so_to: number
+}
+
 export async function createDocumentInfoRecord({
   documentUid,
   uidFile = '',
@@ -151,6 +160,26 @@ export async function markDocumentAsDone(documentUid: string): Promise<void> {
 
   await updateDoc(documentRef, {
     is_completed: true,
+    updated_at: serverTimestamp(),
+  })
+}
+
+export async function updateDocumentRecordInfo({
+  uid,
+  so_ky_hieu,
+  ngay_thang,
+  tac_gia,
+  trich_yeu,
+  so_to,
+}: UpdateDocumentRecordInfoParams): Promise<void> {
+  const documentRef = doc(db, DOCUMENTS_COLLECTION, uid)
+
+  await updateDoc(documentRef, {
+    so_ky_hieu,
+    ngay_thang,
+    tac_gia,
+    trich_yeu,
+    so_to,
     updated_at: serverTimestamp(),
   })
 }

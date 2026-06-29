@@ -30,13 +30,6 @@ export function DocumentRecordPanel({
   return (
     <aside className="min-h-0 overflow-auto bg-slate-50 p-4 md:p-6">
       <div className="space-y-5">
-        {documentDetails.map((documentDetail) => (
-          <DocumentDetailItemForm
-            key={documentDetail.uid}
-            documentDetail={documentDetail}
-          />
-        ))}
-
         <DocumentRecordForm
           formKey={formKey}
           onApprove={onApprove}
@@ -53,6 +46,12 @@ export function DocumentRecordPanel({
             {isMarkingDocumentDone ? 'Đang chuyển trang...' : 'Chuyển trang'}
           </Button>
         )}
+        {documentDetails.map((documentDetail) => (
+          <DocumentDetailItemForm
+            key={documentDetail.uid}
+            documentDetail={documentDetail}
+          />
+        ))}
       </div>
     </aside>
   )

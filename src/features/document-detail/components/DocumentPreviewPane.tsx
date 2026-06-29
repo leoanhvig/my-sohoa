@@ -1,5 +1,6 @@
 import type { DocumentRecord } from '@/apis/document'
 import { getAuthorizationHeader, getDriveFileContentUrl } from '@/apis/drive'
+import { getLocalFileContentUrl } from '@/apis/storage'
 import { SpecialZoomLevel, Viewer, Worker } from '@react-pdf-viewer/core'
 import '@react-pdf-viewer/core/lib/styles/index.css'
 import { defaultLayoutPlugin } from '@react-pdf-viewer/default-layout'
@@ -39,6 +40,13 @@ function getPdfSourceUrl(documentRecord: DocumentRecord, previewUrl: string) {
     return getDriveFileContentUrl(documentRecord.drive_file_id)
   }
 
+  if (
+    documentRecord.storage_provider === 'firebase_storage' &&
+    documentRecord.storage_path
+  ) {
+    return getLocalFileContentUrl(documentRecord.storage_path)
+  }
+
   return (
     documentRecord.download_url ||
     documentRecord.drive_download_link ||
@@ -62,13 +70,17 @@ export function DocumentPreviewPane({
   const pdfSourceUrl = documentRecord
     ? getPdfSourceUrl(documentRecord, previewUrl)
     : ''
-  const shouldUseDriveContentApi = Boolean(documentRecord?.drive_file_id)
+  const shouldUseAuthenticatedContentApi = Boolean(
+    documentRecord?.drive_file_id ||
+      (documentRecord?.storage_provider === 'firebase_storage' &&
+        documentRecord?.storage_path)
+  )
 
   useEffect(() => {
     let isMounted = true
 
     async function loadAuthorizationHeader() {
-      if (!shouldUseDriveContentApi) {
+      if (!shouldUseAuthenticatedContentApi) {
         setAuthorizationHeader({})
         setAuthorizationError('')
         return
@@ -87,7 +99,7 @@ export function DocumentPreviewPane({
           setAuthorizationError(
             authError instanceof Error
               ? authError.message
-              : 'Không lấy được token để tải file Drive.'
+              : 'Không lấy được token để tải file.'
           )
         }
       }
@@ -98,12 +110,13 @@ export function DocumentPreviewPane({
     return () => {
       isMounted = false
     }
-  }, [shouldUseDriveContentApi])
+  }, [shouldUseAuthenticatedContentApi])
 
   const canRenderPdfViewer =
     previewKind === 'pdf' &&
     pdfSourceUrl &&
-    (!shouldUseDriveContentApi || Boolean(authorizationHeader.Authorization))
+    (!shouldUseAuthenticatedContentApi ||
+      Boolean(authorizationHeader.Authorization))
 
   return (
     <section className="flex min-h-[45vh] flex-col border-r border-slate-300 bg-slate-500 md:min-h-0">

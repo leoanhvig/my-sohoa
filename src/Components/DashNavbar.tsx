@@ -18,6 +18,7 @@ export default function DashNavbar() {
   const [navigation, setNavigation] = useState([
     { name: 'Dashboard', href: '/', current: false },
     { name: 'Upload', href: '/upload', current: false },
+    { name: 'File đã upload', href: '/uploaded-files', current: false },
     { name: 'Form sức khỏe', href: '/health-form', current: false },
     { name: 'List HealthForm', href: '/list-healthform', current: false },
   ])
