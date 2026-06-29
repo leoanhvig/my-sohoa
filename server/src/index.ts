@@ -21,6 +21,18 @@ function sanitizeFileName(fileName: string): string {
   return fileName.replace(/[/\\?%*:|"<>]/g, '-').trim() || 'document.pdf'
 }
 
+function getDisplayFileName(fileName: string): string {
+  const mayBeMojibake = /[ÃÂÄÆÐÑ]/.test(fileName)
+
+  if (!mayBeMojibake) {
+    return fileName
+  }
+
+  const decodedFileName = Buffer.from(fileName, 'latin1').toString('utf8')
+
+  return decodedFileName.includes('�') ? fileName : decodedFileName
+}
+
 const pdfUpload = multer({
   storage: multer.diskStorage({
     destination: (_req, _file, callback) => {
@@ -28,13 +40,18 @@ const pdfUpload = multer({
     },
     filename: (_req, file, callback) => {
       const uniquePrefix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`
-      callback(null, `${uniquePrefix}-${sanitizeFileName(file.originalname)}`)
+      callback(
+        null,
+        `${uniquePrefix}-${sanitizeFileName(getDisplayFileName(file.originalname))}`
+      )
     },
   }),
   fileFilter: (_req, file, callback) => {
+    const originalName = getDisplayFileName(file.originalname)
+
     if (
       file.mimetype === 'application/pdf' ||
-      file.originalname.toLowerCase().endsWith('.pdf')
+      originalName.toLowerCase().endsWith('.pdf')
     ) {
       callback(null, true)
       return
@@ -113,7 +130,7 @@ app.post(
         const downloadUrl = `${protocol}://${host}/uploads/${relativePath}`
 
         return {
-          originalName: file.originalname,
+          originalName: getDisplayFileName(file.originalname),
           fileName: file.filename,
           storagePath: relativePath,
           downloadUrl,
