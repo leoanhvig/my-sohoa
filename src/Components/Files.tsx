@@ -21,7 +21,6 @@ function exportFile(file: FileRecord) {
     ['Total files', String(file.number_of_file || 0)],
     ['Done files', String(file.number_of_file_done || 0)],
     ['Updated user', file.updated_uid || ''],
-    ['Drive folder', file.drive_folder_link || ''],
   ]
   const csv = rows
     .map((row) => row.map((cell) => `"${cell.replace(/"/g, '""')}"`).join(','))

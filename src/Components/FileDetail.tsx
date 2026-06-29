@@ -3,30 +3,30 @@ import { getFileRecordsByIds, type FileRecord } from '@/apis/file'
 import { Button } from '@/Components/ui/button'
 import { Input } from '@/Components/ui/input'
 import { DocumentPreviewPane } from '@/features/document-detail/components/DocumentPreviewPane'
-import { useUpdateDocumentRecord } from '@/features/document-detail/hooks/useUpdateDocumentRecord'
 import { getPreviewUrl } from '@/features/document-detail/utils'
+import { useUpdateFileRecord } from '@/hooks/useUpdateFileRecord'
 import { useQuery } from '@tanstack/react-query'
 import { ArrowLeft, FileText, Loader2, Save } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 
-type EditableDocumentValues = {
-  so_ky_hieu: string
-  ngay_thang: string
-  tac_gia: string
-  trich_yeu: string
-  so_to: string
+type EditableFileValues = {
+  file_name: string
+  number_of_file: string
+  number_of_file_done: string
+  creator_uid: string
+  updated_uid: string
+  storage_provider: 'firebase_storage'
 }
 
-function toEditableValues(
-  documentRecord: DocumentRecord
-): EditableDocumentValues {
+function toEditableFileValues(fileRecord: FileRecord): EditableFileValues {
   return {
-    so_ky_hieu: documentRecord.so_ky_hieu || '',
-    ngay_thang: documentRecord.ngay_thang || '',
-    tac_gia: documentRecord.tac_gia || '',
-    trich_yeu: documentRecord.trich_yeu || '',
-    so_to: documentRecord.so_to ? String(documentRecord.so_to) : '',
+    file_name: fileRecord.file_name || '',
+    number_of_file: String(fileRecord.number_of_file || 0),
+    number_of_file_done: String(fileRecord.number_of_file_done || 0),
+    creator_uid: fileRecord.creator_uid || '',
+    updated_uid: fileRecord.updated_uid || '',
+    storage_provider: fileRecord.storage_provider || 'firebase_storage',
   }
 }
 
@@ -67,39 +67,13 @@ function EditableField({
   )
 }
 
-function EditableTextarea({
-  label,
-  value,
-  onChange,
-}: {
-  label: string
-  value: string
-  onChange: (value: string) => void
-}) {
-  return (
-    <div className="space-y-1.5">
-      <label className="text-xs font-bold uppercase tracking-wide text-slate-500">
-        {label}
-      </label>
-      <textarea
-        rows={3}
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        className="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 outline-none ring-offset-white placeholder:text-slate-500 focus-visible:ring-2 focus-visible:ring-slate-950 focus-visible:ring-offset-2"
-      />
-    </div>
-  )
-}
-
 export default function FileDetail() {
   const { fileId } = useParams<{ fileId: string }>()
   const navigate = useNavigate()
   const [selectedDocumentUid, setSelectedDocumentUid] = useState('')
-  const [editableValuesByUid, setEditableValuesByUid] = useState<
-    Record<string, EditableDocumentValues>
-  >({})
-  const { updateDocumentRecord, isUpdatingDocumentRecord } =
-    useUpdateDocumentRecord()
+  const [editableFileValues, setEditableFileValues] =
+    useState<EditableFileValues | null>(null)
+  const { updateFileRecord, isUpdatingFileRecord } = useUpdateFileRecord()
 
   const {
     data: fileRecords = [],
@@ -123,24 +97,16 @@ export default function FileDetail() {
   const documents: DocumentRecord[] = documentsData || []
 
   useEffect(() => {
+    if (fileRecord) {
+      setEditableFileValues(toEditableFileValues(fileRecord))
+    }
+  }, [fileRecord])
+
+  useEffect(() => {
     if (!selectedDocumentUid && documents.length > 0) {
       setSelectedDocumentUid(documents[0].uid)
     }
   }, [documents, selectedDocumentUid])
-
-  useEffect(() => {
-    setEditableValuesByUid((currentValues) => {
-      const nextValues = { ...currentValues }
-
-      for (const documentRecord of documents) {
-        if (!nextValues[documentRecord.uid]) {
-          nextValues[documentRecord.uid] = toEditableValues(documentRecord)
-        }
-      }
-
-      return nextValues
-    })
-  }, [documents])
 
   const selectedDocument = useMemo(
     () =>
@@ -156,40 +122,42 @@ export default function FileDetail() {
   const isLoading = isLoadingFile || isLoadingDocuments
   const error = fileError || documentsError
 
-  function updateEditableValue(
-    documentUid: string,
-    field: keyof EditableDocumentValues,
+  function updateEditableFileValue(
+    field: keyof EditableFileValues,
     value: string
   ) {
-    setEditableValuesByUid((currentValues) => ({
-      ...currentValues,
-      [documentUid]: {
-        ...(currentValues[documentUid] || {
-          so_ky_hieu: '',
-          ngay_thang: '',
-          tac_gia: '',
-          trich_yeu: '',
-          so_to: '',
-        }),
+    setEditableFileValues((currentValues) => {
+      const fallbackValues = fileRecord
+        ? toEditableFileValues(fileRecord)
+        : {
+            file_name: '',
+            number_of_file: '0',
+            number_of_file_done: '0',
+            creator_uid: '',
+            updated_uid: '',
+            storage_provider: 'firebase_storage' as const,
+          }
+
+      return {
+        ...(currentValues || fallbackValues),
         [field]: value,
-      },
-    }))
+      }
+    })
   }
 
-  async function handleSaveDocument(documentRecord: DocumentRecord) {
-    const values = editableValuesByUid[documentRecord.uid]
-
-    if (!values) {
+  async function handleSaveFile() {
+    if (!fileRecord || !editableFileValues) {
       return
     }
 
-    await updateDocumentRecord({
-      uid: documentRecord.uid,
-      so_ky_hieu: values.so_ky_hieu,
-      ngay_thang: values.ngay_thang,
-      tac_gia: values.tac_gia,
-      trich_yeu: values.trich_yeu,
-      so_to: Number(values.so_to || 0),
+    await updateFileRecord({
+      uid: fileRecord.uid,
+      file_name: editableFileValues.file_name,
+      number_of_file: Number(editableFileValues.number_of_file || 0),
+      number_of_file_done: Number(editableFileValues.number_of_file_done || 0),
+      creator_uid: editableFileValues.creator_uid,
+      updated_uid: editableFileValues.updated_uid,
+      storage_provider: editableFileValues.storage_provider,
     })
   }
 
@@ -242,127 +210,143 @@ export default function FileDetail() {
               <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Đang tải danh
               sách PDF...
             </div>
-          ) : documents.length > 0 ? (
+          ) : (
             <div className="space-y-4">
-              {documents.map(
-                (documentRecord: DocumentRecord, index: number) => {
-                  const values =
-                    editableValuesByUid[documentRecord.uid] ||
-                    toEditableValues(documentRecord)
-                  const isSelected =
-                    selectedDocument?.uid === documentRecord.uid
+              {fileRecord && editableFileValues && (
+                <section className="rounded-xl border border-indigo-200 bg-white shadow-sm">
+                  <div className="border-b border-indigo-100 bg-indigo-50 px-4 py-3">
+                    <h2 className="font-bold text-indigo-900">
+                      Thông tin File
+                    </h2>
+                    <p className="mt-1 text-xs font-semibold text-indigo-700">
+                      Các field này lưu trong collection File. Sửa xong bấm lưu
+                      để update Firebase.
+                    </p>
+                  </div>
 
-                  return (
-                    <section
-                      key={documentRecord.uid}
-                      className={
-                        isSelected
-                          ? 'rounded-xl border-2 border-indigo-300 bg-white shadow-sm'
-                          : 'rounded-xl border border-slate-200 bg-white shadow-sm'
-                      }
-                    >
-                      <button
-                        type="button"
-                        className="flex w-full items-start justify-between gap-3 border-b border-slate-100 px-4 py-3 text-left transition hover:bg-slate-50"
-                        onClick={() =>
-                          setSelectedDocumentUid(documentRecord.uid)
+                  <div className="space-y-4 p-4">
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <EditableField
+                        label="Tên file / bộ hồ sơ"
+                        value={editableFileValues.file_name}
+                        onChange={(value) =>
+                          updateEditableFileValue('file_name', value)
                         }
-                      >
-                        <div className="flex items-start gap-3">
-                          <FileText className="mt-0.5 h-5 w-5 shrink-0 text-indigo-500" />
-                          <div>
-                            <p className="font-bold text-slate-900">
-                              {index + 1}. {documentRecord.file_name}
-                            </p>
-                            <p className="mt-1 text-xs text-slate-500">
-                              Document ID: {documentRecord.uid}
-                            </p>
-                          </div>
-                        </div>
-                        <span className="shrink-0 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-700">
-                          {getDocumentStatus(documentRecord)}
-                        </span>
-                      </button>
-
-                      <div className="space-y-4 p-4">
-                        <div className="grid gap-4 sm:grid-cols-2">
-                          <EditableField
-                            label="Số, ký hiệu"
-                            value={values.so_ky_hieu}
-                            onChange={(value) =>
-                              updateEditableValue(
-                                documentRecord.uid,
-                                'so_ky_hieu',
-                                value
-                              )
-                            }
-                          />
-                          <EditableField
-                            label="Ngày, tháng, năm"
-                            value={values.ngay_thang}
-                            placeholder="dd/mm/yyyy"
-                            onChange={(value) =>
-                              updateEditableValue(
-                                documentRecord.uid,
-                                'ngay_thang',
-                                value
-                              )
-                            }
-                          />
-                          <EditableField
-                            label="Tác giả"
-                            value={values.tac_gia}
-                            onChange={(value) =>
-                              updateEditableValue(
-                                documentRecord.uid,
-                                'tac_gia',
-                                value
-                              )
-                            }
-                          />
-                          <EditableField
-                            label="Tờ số/trang số"
-                            value={values.so_to}
-                            onChange={(value) =>
-                              updateEditableValue(
-                                documentRecord.uid,
-                                'so_to',
-                                value
-                              )
-                            }
-                          />
-                        </div>
-                        <EditableTextarea
-                          label="Trích yếu nội dung"
-                          value={values.trich_yeu}
-                          onChange={(value) =>
-                            updateEditableValue(
-                              documentRecord.uid,
-                              'trich_yeu',
-                              value
+                      />
+                      <EditableField
+                        label="Tổng số PDF"
+                        value={editableFileValues.number_of_file}
+                        onChange={(value) =>
+                          updateEditableFileValue('number_of_file', value)
+                        }
+                      />
+                      <EditableField
+                        label="Số PDF đã nhập"
+                        value={editableFileValues.number_of_file_done}
+                        onChange={(value) =>
+                          updateEditableFileValue('number_of_file_done', value)
+                        }
+                      />
+                      <EditableField
+                        label="Creator UID"
+                        value={editableFileValues.creator_uid}
+                        onChange={(value) =>
+                          updateEditableFileValue('creator_uid', value)
+                        }
+                      />
+                      <EditableField
+                        label="Updated UID"
+                        value={editableFileValues.updated_uid}
+                        onChange={(value) =>
+                          updateEditableFileValue('updated_uid', value)
+                        }
+                      />
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-bold uppercase tracking-wide text-slate-500">
+                          Storage provider
+                        </label>
+                        <select
+                          value={editableFileValues.storage_provider}
+                          onChange={(event) =>
+                            updateEditableFileValue(
+                              'storage_provider',
+                              event.target.value
                             )
                           }
-                        />
-                        <Button
-                          type="button"
-                          className="w-full bg-indigo-600 font-bold text-white hover:bg-indigo-700"
-                          disabled={isUpdatingDocumentRecord}
-                          onClick={() => handleSaveDocument(documentRecord)}
+                          className="h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-950 outline-none ring-offset-white focus-visible:ring-2 focus-visible:ring-slate-950 focus-visible:ring-offset-2"
                         >
-                          <Save className="mr-2 h-4 w-4" />
-                          {isUpdatingDocumentRecord
-                            ? 'Đang lưu...'
-                            : 'Lưu thông tin PDF này'}
-                        </Button>
+                          <option value="firebase_storage">
+                            firebase_storage / local server
+                          </option>
+                        </select>
                       </div>
-                    </section>
-                  )
-                }
+                    </div>
+
+                    <div className="rounded-lg bg-slate-50 p-3 text-xs font-semibold text-slate-500">
+                      <p>File UID: {fileRecord.uid}</p>
+                    </div>
+
+                    <Button
+                      type="button"
+                      className="w-full bg-indigo-600 font-bold text-white hover:bg-indigo-700"
+                      disabled={isUpdatingFileRecord}
+                      onClick={handleSaveFile}
+                    >
+                      <Save className="mr-2 h-4 w-4" />
+                      {isUpdatingFileRecord
+                        ? 'Đang lưu File...'
+                        : 'Lưu thông tin File'}
+                    </Button>
+                  </div>
+                </section>
               )}
-            </div>
-          ) : (
-            <div className="rounded-xl border border-slate-200 bg-white p-10 text-center text-sm font-semibold text-slate-500">
-              File này chưa có PDF nào.
+
+              {documents.length > 0 ? (
+                documents.map(
+                  (documentRecord: DocumentRecord, index: number) => {
+                    const isSelected =
+                      selectedDocument?.uid === documentRecord.uid
+
+                    return (
+                      <section
+                        key={documentRecord.uid}
+                        className={
+                          isSelected
+                            ? 'rounded-xl border-2 border-indigo-300 bg-white shadow-sm'
+                            : 'rounded-xl border border-slate-200 bg-white shadow-sm'
+                        }
+                      >
+                        <button
+                          type="button"
+                          className="flex w-full items-start justify-between gap-3 border-b border-slate-100 px-4 py-3 text-left transition hover:bg-slate-50"
+                          onClick={() =>
+                            setSelectedDocumentUid(documentRecord.uid)
+                          }
+                        >
+                          <div className="flex items-start gap-3">
+                            <FileText className="mt-0.5 h-5 w-5 shrink-0 text-indigo-500" />
+                            <div>
+                              <p className="font-bold text-slate-900">
+                                {index + 1}. {documentRecord.file_name}
+                              </p>
+                              <p className="mt-1 text-xs text-slate-500">
+                                Document ID: {documentRecord.uid}
+                              </p>
+                            </div>
+                          </div>
+                          <span className="shrink-0 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-700">
+                            {getDocumentStatus(documentRecord)}
+                          </span>
+                        </button>
+                      </section>
+                    )
+                  }
+                )
+              ) : (
+                <div className="rounded-xl border border-slate-200 bg-white p-10 text-center text-sm font-semibold text-slate-500">
+                  File này chưa có PDF nào.
+                </div>
+              )}
             </div>
           )}
         </aside>

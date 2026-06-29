@@ -7,9 +7,5 @@ export function getPreviewUrl(
     return ''
   }
 
-  if (documentRecord.drive_file_id) {
-    return `https://drive.google.com/file/d/${documentRecord.drive_file_id}/preview`
-  }
-
-  return documentRecord.download_url || documentRecord.drive_web_view_link || ''
+  return documentRecord.download_url || ''
 }

@@ -7,7 +7,7 @@ import { Button } from './ui/button'
 import { Input } from './ui/input'
 
 function isLocalUploadedFile(file: FileRecord): boolean {
-  return file.storage_provider === 'firebase_storage' && !file.drive_folder_id
+  return file.storage_provider === 'firebase_storage'
 }
 
 function getCompletedPercent(file: FileRecord): number {
@@ -59,8 +59,7 @@ export default function UploadedFiles() {
                 upload
               </h1>
               <p className="mt-1 text-sm text-slate-500">
-                Danh sách các bộ PDF upload trực tiếp lên server project, không
-                bao gồm file sync từ Google Drive.
+                Danh sách các bộ PDF upload trực tiếp lên server project.
               </p>
             </div>
 

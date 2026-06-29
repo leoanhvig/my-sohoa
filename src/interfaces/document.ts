@@ -12,13 +12,7 @@ export interface CreateDocumentRecordParams {
   relative_path?: string
   storage_path?: string
   download_url?: string
-  drive_file_id?: string
-  drive_folder_id?: string
-  drive_mime_type?: string
-  drive_size?: string
-  drive_web_view_link?: string
-  drive_download_link?: string
-  storage_provider?: 'firebase_storage' | 'google_drive'
+  storage_provider?: 'firebase_storage'
 }
 
 export interface DocumentRecord {
@@ -34,13 +28,7 @@ export interface DocumentRecord {
   relative_path: string
   storage_path: string
   download_url: string
-  drive_file_id: string
-  drive_folder_id: string
-  drive_mime_type: string
-  drive_size: string
-  drive_web_view_link: string
-  drive_download_link: string
-  storage_provider: 'firebase_storage' | 'google_drive'
+  storage_provider: 'firebase_storage'
   is_completed?: boolean
   created_at: ReturnType<typeof serverTimestamp>
   updated_at: ReturnType<typeof serverTimestamp>

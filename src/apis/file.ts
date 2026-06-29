@@ -18,15 +18,23 @@ export interface CreateFileRecordParams {
   number_of_file_done?: number
   creator_uid: string
   updated_uid: string
-  drive_folder_id?: string
-  drive_folder_link?: string
-  storage_provider?: 'firebase_storage' | 'google_drive'
+  storage_provider?: 'firebase_storage'
 }
 
 export interface FileRecord extends CreateFileRecordParams {
   uid: string
   created_at: ReturnType<typeof serverTimestamp>
   updated_at: ReturnType<typeof serverTimestamp>
+}
+
+export interface UpdateFileRecordParams {
+  uid: string
+  file_name: string
+  number_of_file: number
+  number_of_file_done: number
+  creator_uid: string
+  updated_uid: string
+  storage_provider: 'firebase_storage'
 }
 
 export interface DashboardFileRecord extends FileRecord {
@@ -41,8 +49,6 @@ export async function createFileRecord({
   number_of_file_done = 0,
   creator_uid,
   updated_uid,
-  drive_folder_id = '',
-  drive_folder_link = '',
   storage_provider = 'firebase_storage',
 }: CreateFileRecordParams): Promise<FileRecord> {
   const fileRef = doc(collection(db, FILE_COLLECTION))
@@ -54,8 +60,6 @@ export async function createFileRecord({
     number_of_file_done,
     creator_uid,
     updated_uid,
-    drive_folder_id,
-    drive_folder_link,
     storage_provider,
     created_at: timestamp,
     updated_at: timestamp,
@@ -165,6 +169,28 @@ export async function claimFileRecord({
 
   await updateDoc(fileRef, {
     updated_uid: userUid,
+    updated_at: serverTimestamp(),
+  })
+}
+
+export async function updateFileRecordInfo({
+  uid,
+  file_name,
+  number_of_file,
+  number_of_file_done,
+  creator_uid,
+  updated_uid,
+  storage_provider,
+}: UpdateFileRecordParams): Promise<void> {
+  const fileRef = doc(db, FILE_COLLECTION, uid)
+
+  await updateDoc(fileRef, {
+    file_name,
+    number_of_file,
+    number_of_file_done,
+    creator_uid,
+    updated_uid,
+    storage_provider,
     updated_at: serverTimestamp(),
   })
 }

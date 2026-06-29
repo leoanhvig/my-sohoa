@@ -1,5 +1,4 @@
 import { auth } from '../firebase'
-import { getApiBaseUrl } from './drive'
 
 export interface UploadPdfFilesParams {
   files: File[]
@@ -12,6 +11,10 @@ export interface UploadedPdfFile {
   downloadUrl: string
   size: number
   mimeType: string
+}
+
+export function getApiBaseUrl(): string {
+  return import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000'
 }
 
 export function getLocalFileContentUrl(storagePath: string): string {

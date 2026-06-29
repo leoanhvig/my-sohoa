@@ -1,14 +1,21 @@
 import type { DocumentRecord } from '@/apis/document'
-import { getAuthorizationHeader, getDriveFileContentUrl } from '@/apis/drive'
 import { getLocalFileContentUrl } from '@/apis/storage'
-import { SpecialZoomLevel, Viewer, Worker } from '@react-pdf-viewer/core'
-import '@react-pdf-viewer/core/lib/styles/index.css'
-import { defaultLayoutPlugin } from '@react-pdf-viewer/default-layout'
-import '@react-pdf-viewer/default-layout/lib/styles/index.css'
-import { FileText, Loader2 } from 'lucide-react'
-import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.js?url'
+import {
+  ChevronLeft,
+  ChevronRight,
+  FileText,
+  Loader2,
+  ZoomIn,
+  ZoomOut,
+} from 'lucide-react'
+import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
 import { useEffect, useState } from 'react'
+import { Document, Page, pdfjs } from 'react-pdf'
+import 'react-pdf/dist/Page/AnnotationLayer.css'
+import 'react-pdf/dist/Page/TextLayer.css'
 import { StatusMessage } from './StatusMessage'
+
+pdfjs.GlobalWorkerOptions.workerSrc = pdfWorkerUrl
 
 type DocumentPreviewPaneProps = {
   documentRecord?: DocumentRecord | null
@@ -20,15 +27,10 @@ type DocumentPreviewPaneProps = {
 type PreviewKind = 'pdf' | 'unknown'
 
 function getPreviewKind(documentRecord?: DocumentRecord | null): PreviewKind {
-  const mimeType = documentRecord?.drive_mime_type?.toLowerCase() || ''
   const fileName = documentRecord?.file_name?.toLowerCase() || ''
   const url = documentRecord?.download_url?.toLowerCase() || ''
 
-  if (
-    mimeType.includes('pdf') ||
-    fileName.endsWith('.pdf') ||
-    url.includes('.pdf')
-  ) {
+  if (fileName.endsWith('.pdf') || url.includes('.pdf')) {
     return 'pdf'
   }
 
@@ -36,23 +38,11 @@ function getPreviewKind(documentRecord?: DocumentRecord | null): PreviewKind {
 }
 
 function getPdfSourceUrl(documentRecord: DocumentRecord, previewUrl: string) {
-  if (documentRecord.drive_file_id) {
-    return getDriveFileContentUrl(documentRecord.drive_file_id)
-  }
-
-  if (
-    documentRecord.storage_provider === 'firebase_storage' &&
-    documentRecord.storage_path
-  ) {
+  if (documentRecord.storage_path) {
     return getLocalFileContentUrl(documentRecord.storage_path)
   }
 
-  return (
-    documentRecord.download_url ||
-    documentRecord.drive_download_link ||
-    documentRecord.drive_web_view_link ||
-    previewUrl
-  )
+  return documentRecord.download_url || previewUrl
 }
 
 export function DocumentPreviewPane({
@@ -61,62 +51,43 @@ export function DocumentPreviewPane({
   isLoading,
   error,
 }: DocumentPreviewPaneProps) {
-  const defaultLayoutPluginInstance = defaultLayoutPlugin()
-  const [authorizationHeader, setAuthorizationHeader] = useState<
-    Record<string, string>
-  >({})
-  const [authorizationError, setAuthorizationError] = useState('')
+  const [numberOfPages, setNumberOfPages] = useState(0)
+  const [pageNumber, setPageNumber] = useState(1)
+  const [scale, setScale] = useState(1.15)
+  const [pdfError, setPdfError] = useState('')
   const previewKind = getPreviewKind(documentRecord)
   const pdfSourceUrl = documentRecord
     ? getPdfSourceUrl(documentRecord, previewUrl)
     : ''
-  const shouldUseAuthenticatedContentApi = Boolean(
-    documentRecord?.drive_file_id ||
-      (documentRecord?.storage_provider === 'firebase_storage' &&
-        documentRecord?.storage_path)
-  )
+  const canRenderPdfViewer = previewKind === 'pdf' && Boolean(pdfSourceUrl)
 
   useEffect(() => {
-    let isMounted = true
+    setNumberOfPages(0)
+    setPageNumber(1)
+    setPdfError('')
+  }, [pdfSourceUrl])
 
-    async function loadAuthorizationHeader() {
-      if (!shouldUseAuthenticatedContentApi) {
-        setAuthorizationHeader({})
-        setAuthorizationError('')
-        return
-      }
+  function goToPreviousPage() {
+    setPageNumber((currentPage) => Math.max(1, currentPage - 1))
+  }
 
-      try {
-        const headers = await getAuthorizationHeader()
+  function goToNextPage() {
+    setPageNumber((currentPage) =>
+      numberOfPages ? Math.min(numberOfPages, currentPage + 1) : currentPage
+    )
+  }
 
-        if (isMounted) {
-          setAuthorizationHeader(headers)
-          setAuthorizationError('')
-        }
-      } catch (authError) {
-        if (isMounted) {
-          setAuthorizationHeader({})
-          setAuthorizationError(
-            authError instanceof Error
-              ? authError.message
-              : 'Không lấy được token để tải file.'
-          )
-        }
-      }
-    }
+  function zoomOut() {
+    setScale((currentScale) =>
+      Math.max(0.6, Number((currentScale - 0.15).toFixed(2)))
+    )
+  }
 
-    loadAuthorizationHeader()
-
-    return () => {
-      isMounted = false
-    }
-  }, [shouldUseAuthenticatedContentApi])
-
-  const canRenderPdfViewer =
-    previewKind === 'pdf' &&
-    pdfSourceUrl &&
-    (!shouldUseAuthenticatedContentApi ||
-      Boolean(authorizationHeader.Authorization))
+  function zoomIn() {
+    setScale((currentScale) =>
+      Math.min(2.4, Number((currentScale + 0.15).toFixed(2)))
+    )
+  }
 
   return (
     <section className="flex min-h-[45vh] flex-col border-r border-slate-300 bg-slate-500 md:min-h-0">
@@ -146,39 +117,95 @@ export function DocumentPreviewPane({
             </div>
 
             <div className="min-h-0 flex-1 bg-slate-600">
-              {authorizationError && (
-                <div className="border-b border-slate-200 bg-slate-50 px-3 py-2 text-xs text-amber-700">
-                  {authorizationError}
-                </div>
-              )}
-
               {canRenderPdfViewer ? (
-                <Worker workerUrl={pdfWorkerUrl}>
-                  <Viewer
-                    fileUrl={pdfSourceUrl}
-                    httpHeaders={authorizationHeader}
-                    defaultScale={SpecialZoomLevel.PageFit}
-                    plugins={[defaultLayoutPluginInstance]}
-                    renderLoader={(percentages) => (
-                      <div className="flex h-full items-center justify-center text-sm font-semibold text-white">
-                        <Loader2 className="mr-2 h-5 w-5 animate-spin" /> Đang
-                        tải PDF {Math.round(percentages)}%
+                <div className="flex h-full min-h-[70vh] flex-col bg-slate-700">
+                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-500 bg-slate-800 px-3 py-2 text-xs font-bold text-white">
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        className="rounded bg-slate-700 px-2 py-1 hover:bg-slate-600 disabled:cursor-not-allowed disabled:opacity-50"
+                        disabled={pageNumber <= 1}
+                        onClick={goToPreviousPage}
+                      >
+                        <ChevronLeft className="h-4 w-4" />
+                      </button>
+                      <span>
+                        Trang {pageNumber}/{numberOfPages || '...'}
+                      </span>
+                      <button
+                        type="button"
+                        className="rounded bg-slate-700 px-2 py-1 hover:bg-slate-600 disabled:cursor-not-allowed disabled:opacity-50"
+                        disabled={!numberOfPages || pageNumber >= numberOfPages}
+                        onClick={goToNextPage}
+                      >
+                        <ChevronRight className="h-4 w-4" />
+                      </button>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        className="rounded bg-slate-700 px-2 py-1 hover:bg-slate-600"
+                        onClick={zoomOut}
+                      >
+                        <ZoomOut className="h-4 w-4" />
+                      </button>
+                      <span>{Math.round(scale * 100)}%</span>
+                      <button
+                        type="button"
+                        className="rounded bg-slate-700 px-2 py-1 hover:bg-slate-600"
+                        onClick={zoomIn}
+                      >
+                        <ZoomIn className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="min-h-0 flex-1 overflow-auto p-4">
+                    {pdfError && (
+                      <div className="mb-3 rounded border border-amber-300 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800">
+                        Không hiển thị được PDF: {pdfError}
                       </div>
                     )}
-                    renderError={() => (
-                      <iframe
-                        title={documentRecord.file_name || 'Document preview'}
-                        src={previewUrl}
-                        className="h-full min-h-[70vh] w-full border-0 bg-white"
-                      />
-                    )}
-                  />
-                </Worker>
+
+                    <Document
+                      file={pdfSourceUrl}
+                      onLoadSuccess={({ numPages }) => {
+                        setPdfError('')
+                        setNumberOfPages(numPages)
+                        setPageNumber(1)
+                      }}
+                      onLoadError={(loadError) => {
+                        setPdfError(loadError.message)
+                      }}
+                      loading={
+                        <div className="flex h-full items-center justify-center text-sm font-semibold text-white">
+                          <Loader2 className="mr-2 h-5 w-5 animate-spin" /> Đang
+                          tải PDF...
+                        </div>
+                      }
+                      error={
+                        <div className="rounded border border-red-200 bg-red-50 px-3 py-2 text-sm font-semibold text-red-700">
+                          Không tải được PDF. Hãy kiểm tra file có tồn tại trong
+                          thư mục uploads hay không.
+                        </div>
+                      }
+                    >
+                      <div className="flex justify-center">
+                        <Page
+                          pageNumber={pageNumber}
+                          scale={scale}
+                          renderAnnotationLayer
+                          renderTextLayer
+                        />
+                      </div>
+                    </Document>
+                  </div>
+                </div>
               ) : (
-                <iframe
-                  title={documentRecord.file_name || 'Document preview'}
-                  src={previewUrl}
-                  className="h-full min-h-[70vh] w-full border-0 bg-white"
+                <StatusMessage
+                  tone="warning"
+                  message="File này không phải PDF hoặc chưa có đường dẫn PDF."
                 />
               )}
             </div>
