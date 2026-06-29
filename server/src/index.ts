@@ -1,5 +1,6 @@
 import cors from 'cors'
 import dotenv from 'dotenv'
+import type { NextFunction, Request, Response } from 'express'
 import express from 'express'
 import fs from 'fs'
 import multer from 'multer'
@@ -71,7 +72,7 @@ app.get('/api/health', (_req, res) => {
 app.post(
   '/api/local-files/upload-pdfs',
   requireFirebaseAuth,
-  (req, res, next) => {
+  (req: Request, res: Response, next: NextFunction) => {
     pdfUpload.array('files')(req, res, (error) => {
       if (error instanceof multer.MulterError) {
         if (error.code === 'LIMIT_FILE_SIZE') {
@@ -101,8 +102,11 @@ app.post(
         return res.status(400).json({ message: 'Please upload PDF files.' })
       }
 
-      const protocol = req.headers['x-forwarded-proto'] || req.protocol
-      const host = req.get('host')
+      const forwardedProto = req.headers['x-forwarded-proto']
+      const protocol = Array.isArray(forwardedProto)
+        ? forwardedProto[0]
+        : forwardedProto || 'http'
+      const host = req.headers.host || `localhost:${port}`
       const files = uploadedFiles.map((file) => {
         const relativePath = path
           .relative(uploadsRoot, file.path)
