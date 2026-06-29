@@ -5,9 +5,11 @@
   "type": "module",
   "homepage": "https://igorbayerl.github.io/chess-two",
   "scripts": {
-    "dev": "vite",
+    "dev": "concurrently \"vite\" \"yarn dev:api\"",
     "dev:api": "ts-node-dev --project server/tsconfig.json --respawn --transpile-only server/src/index.ts",
-    "dev:all": "concurrently \"yarn dev\" \"yarn dev:api\"",
+    "dev:all": "yarn dev",
+    "build:api": "tsc --project server/tsconfig.json",
+    "start:api": "node server/dist/index.js",
     "build": "tsc && vite build",
     "preview": "vite preview --port 8080",
     "prettyfy": "prettier --write \"./**/*.{js,jsx,json,ts,tsx}\""

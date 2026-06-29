@@ -1,6 +1,6 @@
 import { Button } from '@/Components/ui/button'
 import { CheckCircle2 } from 'lucide-react'
-import type { FormEvent } from 'react'
+import type { FormEvent, KeyboardEvent } from 'react'
 import type { DocumentRecordFormValues } from '../types'
 
 type DocumentDetailFormProps = {
@@ -22,6 +22,8 @@ export function DocumentDetailForm({
   submittingLabel = 'đang lưu...',
   onCancel,
 }: DocumentDetailFormProps) {
+  const canSubmit = Boolean(values.soTo.trim() && values.trichYeu.trim())
+
   function updateField(
     field: keyof DocumentRecordFormValues,
     value: string
@@ -34,11 +36,29 @@ export function DocumentDetailForm({
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
+
+    if (!canSubmit) {
+      return
+    }
+
     await onSubmit()
   }
 
+  function handleKeyDown(event: KeyboardEvent<HTMLFormElement>) {
+    if (event.key !== 'Enter' || event.shiftKey || isSubmitting) {
+      return
+    }
+
+    event.preventDefault()
+    event.currentTarget.requestSubmit()
+  }
+
   return (
-    <form className="space-y-5" onSubmit={handleSubmit}>
+    <form
+      className="space-y-5"
+      onSubmit={handleSubmit}
+      onKeyDown={handleKeyDown}
+    >
       <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
         <div className="space-y-4">
           <EditableField
@@ -66,6 +86,7 @@ export function DocumentDetailForm({
           <EditableTextarea
             label="Trích yếu nội dung"
             value={values.trichYeu}
+            required
             onChange={(value) => updateField('trichYeu', value)}
           />
         </div>
@@ -86,7 +107,7 @@ export function DocumentDetailForm({
         <Button
           type="submit"
           className="h-11 flex-1 bg-emerald-600 font-bold shadow hover:bg-emerald-700"
-          disabled={isSubmitting}
+          disabled={isSubmitting || !canSubmit}
         >
           <CheckCircle2 className="mr-2 h-5 w-5" />{' '}
           {isSubmitting ? submittingLabel : submitLabel}
@@ -128,17 +149,20 @@ function EditableTextarea({
   label,
   value,
   onChange,
+  required = false,
 }: {
   label: string
   value: string
   onChange: (value: string) => void
+  required?: boolean
 }) {
   return (
     <div>
-      <Label label={label} />
+      <Label label={label} required={required} />
       <textarea
         rows={4}
         value={value}
+        required={required}
         onChange={(event) =>
           onChange(event.target.value.replace(/[\r\n]+/g, ' '))
         }

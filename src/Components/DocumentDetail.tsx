@@ -14,6 +14,7 @@ import type { DocumentRecordFormValues } from '@/features/document-detail/types'
 import { getPreviewUrl } from '@/features/document-detail/utils'
 import { useUpdateFileRecord } from '@/hooks/useUpdateFileRecord'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { Loader2 } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 
@@ -48,6 +49,7 @@ export default function DocumentDetail() {
   const [editingDocument, setEditingDocument] = useState<DocumentRecord | null>(
     null
   )
+  const [previewPage, setPreviewPage] = useState<number | null>(null)
   const [isSavingDocument, setIsSavingDocument] = useState(false)
   const { showTypedToast } = useToast()
   const { updateFileRecord, isUpdatingFileRecord } = useUpdateFileRecord()
@@ -84,7 +86,16 @@ export default function DocumentDetail() {
   useEffect(() => {
     setNextFormValues(null)
     setEditingDocument(null)
+    setPreviewPage(null)
   }, [documentId, fileId])
+
+  useEffect(() => {
+    if (!fileUid || isLoadingDocuments || previewPage !== null) {
+      return
+    }
+
+    setPreviewPage(documentRecords.length + 1)
+  }, [documentRecords.length, fileUid, isLoadingDocuments, previewPage])
 
   useEffect(() => {
     if (error) {
@@ -169,6 +180,7 @@ export default function DocumentDetail() {
         soKyHieu: getNextSoKyHieu(values.soKyHieu),
         ngayThang: '',
         trichYeu: '',
+        soTo: '',
       })
       if (isFileCompleted) {
         showTypedToast(
@@ -225,20 +237,28 @@ export default function DocumentDetail() {
           previewUrl={previewUrl}
           isLoading={isLoading || isLoadingFile || isLoadingDocuments}
           error={error || fileError || documentsError}
+          page={previewPage ?? 0}
         />
-        <DocumentRecordPanel
-          formKey={recordFormKey}
-          resetKey={fileRecord?.uid}
-          initialValues={formInitialValues}
-          editingDocument={editingDocument}
-          updateInitialValues={updateInitialValues}
-          documents={documentRecords}
-          onApprove={handleApprove}
-          onUpdate={handleUpdate}
-          onStartUpdate={setEditingDocument}
-          onCancelUpdate={() => setEditingDocument(null)}
-          isSaving={isUpdatingFileRecord || isSavingDocument}
-        />
+        {isLoadingDocuments ? (
+          <aside className="flex min-h-0 items-center justify-center bg-slate-50 p-4 text-sm font-semibold text-slate-500 md:p-6">
+            <Loader2 className="mr-2 h-5 w-5 animate-spin" /> Đang tải
+            documents...
+          </aside>
+        ) : (
+          <DocumentRecordPanel
+            formKey={recordFormKey}
+            resetKey={fileRecord?.uid}
+            initialValues={formInitialValues}
+            editingDocument={editingDocument}
+            updateInitialValues={updateInitialValues}
+            documents={documentRecords}
+            onApprove={handleApprove}
+            onUpdate={handleUpdate}
+            onStartUpdate={setEditingDocument}
+            onCancelUpdate={() => setEditingDocument(null)}
+            isSaving={isUpdatingFileRecord || isSavingDocument}
+          />
+        )}
       </div>
     </main>
   )

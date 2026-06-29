@@ -1,10 +1,16 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { Route, BrowserRouter as Router, Routes } from 'react-router-dom'
+import {
+  Navigate,
+  Route,
+  BrowserRouter as Router,
+  Routes,
+} from 'react-router-dom'
 import 'react-toastify/dist/ReactToastify.min.css'
 import { ApiProvider } from '../contexts/ApiContext'
 import AppContextProviders from '../contexts/AppContextProvider'
 import { AuthProvider } from '../contexts/AuthContext'
 import { ToastProvider } from '../contexts/ToastContext'
+import { useUserStore } from '../stores/userStore'
 import Dashboard from './Dashboard'
 import DocumentDetail from './DocumentDetail'
 import FileDetail from './FileDetail'
@@ -16,6 +22,22 @@ import UploadFile from './UploadFile'
 import UploadedFiles from './UploadedFiles'
 
 const queryClient = new QueryClient()
+const UPLOAD_ALLOWED_USER_NAME = 'nhaplieu01'
+
+function UploadRoutesGuard({ children }: { children: JSX.Element }) {
+  const userRecord = useUserStore((state) => state.userRecord)
+  const isUserLoading = useUserStore((state) => state.loading)
+
+  if (isUserLoading) {
+    return null
+  }
+
+  if (userRecord?.user_name !== UPLOAD_ALLOWED_USER_NAME) {
+    return <Navigate to="/" replace />
+  }
+
+  return children
+}
 
 function App() {
   const providers = [ToastProvider, AuthProvider, ApiProvider]
@@ -39,8 +61,22 @@ function App() {
               /> */}
               {/* <Route element={<HealthFormList />} path="/list-healthform" /> */}
               {/* <Route path="/update-profile" element={<UpdateProfile />} /> */}
-              <Route path="/upload" element={<UploadFile />} />
-              <Route path="/uploaded-files" element={<UploadedFiles />} />
+              <Route
+                path="/upload"
+                element={
+                  <UploadRoutesGuard>
+                    <UploadFile />
+                  </UploadRoutesGuard>
+                }
+              />
+              <Route
+                path="/uploaded-files"
+                element={
+                  <UploadRoutesGuard>
+                    <UploadedFiles />
+                  </UploadRoutesGuard>
+                }
+              />
             </Route>
             <Route path="/signup" element={<Signup />} />
             <Route path="/login" element={<Login />} />

@@ -11,7 +11,7 @@ import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getDocumentsByUidFile } from '../apis/document'
 import { FileRecord } from '../apis/file'
-import { getAllUsers } from '../apis/user'
+import { getAllUsers, type UserRecord } from '../apis/user'
 import { useAllFiles } from '../hooks/useAllFiles'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
@@ -42,13 +42,16 @@ export default function UploadedFiles() {
   const [searchText, setSearchText] = useState('')
   const [exportingFileUid, setExportingFileUid] = useState('')
   const { data: files = [], isLoading, error } = useAllFiles()
-  const { data: users = [] } = useQuery({
+  const { data: users = [] } = useQuery<UserRecord[]>({
     queryKey: ['users', 'all'],
     queryFn: getAllUsers,
   })
   const allFiles = files as FileRecord[]
-  const userNameByUid = useMemo(
-    () => new Map(users.map((user) => [user.uid, user.user_name])),
+  const userNameByUid = useMemo<Map<string, string>>(
+    () =>
+      new Map(
+        users.map((user: UserRecord) => [user.uid, user.user_name] as const)
+      ),
     [users]
   )
 

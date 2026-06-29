@@ -8,6 +8,7 @@ type DocumentPreviewPaneProps = {
   previewUrl: string
   isLoading: boolean
   error: unknown
+  page?: number | string
 }
 
 type PreviewKind = 'pdf' | 'unknown'
@@ -36,14 +37,18 @@ export function DocumentPreviewPane({
   previewUrl,
   isLoading,
   error,
+  page = 0,
 }: DocumentPreviewPaneProps) {
   const previewKind = getPreviewKind(fileRecord)
   const pdfSourceUrl = fileRecord ? getPdfSourceUrl(fileRecord, previewUrl) : ''
+  const previewPage = page || 0
   const canRenderPdfViewer = previewKind === 'pdf' && Boolean(pdfSourceUrl)
   const nativePdfUrl = pdfSourceUrl
-    ? `${pdfSourceUrl}#toolbar=0&navpanes=0&scrollbar=0&statusbar=0&messages=0&action=download`
+    ? `${pdfSourceUrl}#toolbar=1&navpanes=1&scrollbar=1&statusbar=1&messages=1&page=${previewPage}`
     : ''
-  const iframePdfUrl = pdfSourceUrl ? `${pdfSourceUrl}#toolbar=0` : ''
+  const iframePdfUrl = pdfSourceUrl
+    ? `${pdfSourceUrl}#toolbar=1&navpanes=1&page=${previewPage}`
+    : ''
 
   return (
     <section className="flex min-h-[45vh] flex-col border-r border-slate-300 bg-slate-500 md:min-h-0">
