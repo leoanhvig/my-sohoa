@@ -5,7 +5,6 @@ import express from 'express'
 import fs from 'fs'
 import multer from 'multer'
 import path from 'path'
-import { AuthenticatedRequest, requireFirebaseAuth } from './authMiddleware'
 
 dotenv.config({ path: '.env.local' })
 dotenv.config({ path: 'server/.env' })
@@ -71,7 +70,6 @@ app.get('/api/health', (_req, res) => {
 
 app.post(
   '/api/local-files/upload-pdfs',
-  requireFirebaseAuth,
   (req: Request, res: Response, next: NextFunction) => {
     pdfUpload.array('files')(req, res, (error) => {
       if (error instanceof multer.MulterError) {
@@ -94,7 +92,7 @@ app.post(
       next()
     })
   },
-  async (req: AuthenticatedRequest, res) => {
+  async (req: Request, res: Response) => {
     try {
       const uploadedFiles = (req.files || []) as Express.Multer.File[]
 

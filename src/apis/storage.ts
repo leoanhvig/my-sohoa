@@ -1,5 +1,3 @@
-import { auth } from '../firebase'
-
 export interface UploadPdfFilesParams {
   files: File[]
 }
@@ -27,12 +25,6 @@ export function getLocalFileContentUrl(storagePath: string): string {
 export async function uploadPdfFiles({
   files,
 }: UploadPdfFilesParams): Promise<UploadedPdfFile[]> {
-  const token = await auth.currentUser?.getIdToken()
-
-  if (!token) {
-    throw new Error('Bạn cần đăng nhập để upload PDF.')
-  }
-
   const apiBaseUrl = getApiBaseUrl()
   const formData = new FormData()
 
@@ -42,9 +34,6 @@ export async function uploadPdfFiles({
 
   const response = await fetch(`${apiBaseUrl}/api/local-files/upload-pdfs`, {
     method: 'POST',
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
     body: formData,
   })
 

@@ -20,6 +20,10 @@
     "@tailwindcss/forms": "^0.5.11",
     "@tanstack/react-query": "^5.101.0",
     "@tanstack/react-table": "^8.21.3",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/multer": "^2.1.0",
+    "@types/node": "^25.9.3",
     "axios": "^0.27.2",
     "class-variance-authority": "^0.7.1",
     "cors": "^2.8.6",
@@ -42,10 +46,6 @@
     "zustand": "^5.0.14"
   },
   "devDependencies": {
-    "@types/cors": "^2.8.19",
-    "@types/express": "^5.0.6",
-    "@types/multer": "^2.1.0",
-    "@types/node": "^25.9.3",
     "@types/react": "^18.0.17",
     "@types/react-dom": "^18.0.6",
     "@vitejs/plugin-react": "^2.0.1",
