@@ -42,9 +42,9 @@ export function DocumentRecordPanel({
   }, [editingDocument])
 
   return (
-    <aside className="min-h-0 overflow-auto bg-slate-50 p-4 md:p-6">
-      <div className="space-y-5">
-        <div className="grid grid-cols-2 rounded-lg border border-slate-200 bg-white p-1 shadow-sm">
+    <aside className="min-h-0 overflow-hidden bg-slate-50 p-4 md:p-6">
+      <div className="flex h-full min-h-0 flex-col gap-5">
+        <div className="grid shrink-0 grid-cols-2 rounded-lg border border-slate-200 bg-white p-1 shadow-sm">
           <button
             type="button"
             className={
@@ -70,28 +70,25 @@ export function DocumentRecordPanel({
         </div>
 
         {activeTab === 'form' && (
-          <DocumentRecordForm
-            formKey={isUpdateMode ? editingDocument?.uid : formKey}
-            resetKey={isUpdateMode ? editingDocument?.uid : resetKey}
-            initialValues={isUpdateMode ? updateInitialValues : initialValues}
-            onApprove={isUpdateMode ? onUpdate : onApprove}
-            isSaving={isSaving}
-            submitLabel={isUpdateMode ? 'Lưu cập nhật' : undefined}
-            submittingLabel={isUpdateMode ? 'Đang cập nhật...' : undefined}
-            onCancel={isUpdateMode ? onCancelUpdate : undefined}
-          />
+          <div className="min-h-0 flex-1 overflow-y-auto">
+            <DocumentRecordForm
+              formKey={isUpdateMode ? editingDocument?.uid : formKey}
+              resetKey={isUpdateMode ? editingDocument?.uid : resetKey}
+              initialValues={isUpdateMode ? updateInitialValues : initialValues}
+              onApprove={isUpdateMode ? onUpdate : onApprove}
+              isSaving={isSaving}
+              submitLabel={isUpdateMode ? 'Lưu cập nhật' : undefined}
+              submittingLabel={isUpdateMode ? 'Đang cập nhật...' : undefined}
+              onCancel={isUpdateMode ? onCancelUpdate : undefined}
+            />
+          </div>
         )}
 
         {activeTab === 'documents' && (
-          <section className="rounded-lg border border-slate-200 bg-white shadow-sm">
-            <div className="border-b border-slate-100 px-4 py-3">
-              <h2 className="font-bold text-slate-900">
-                File đã nhập ({documents.length})
-              </h2>
-            </div>
+          <section className="min-h-0 flex-1 overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-sm">
             {documents.length > 0 ? (
               <div className="divide-y divide-slate-100">
-                {documents.map((documentRecord, index) => (
+                {[...documents].reverse().map((documentRecord, index) => (
                   <button
                     key={documentRecord.uid}
                     type="button"
@@ -101,11 +98,19 @@ export function DocumentRecordPanel({
                       setActiveTab('form')
                     }}
                   >
-                    <p className="text-sm font-bold text-slate-900">
-                      {index + 1}.{' '}
-                      {`${documentRecord.so_ky_hieu}-${documentRecord.so_to}` ||
-                        'Chưa có số ký hiệu'}
-                    </p>
+                    <div className="flex flex-col gap-1">
+                      <p className="text-sm font-bold text-slate-900">
+                        {index + 1}.{' '}
+                        {`${documentRecord.so_ky_hieu}-${documentRecord.so_to}` ||
+                          'Chưa có số ký hiệu'}
+                      </p>
+                      <p className="text-xs font-semibold text-slate-600">
+                        Ngày tháng: {documentRecord.ngay_thang || 'Chưa có'}
+                      </p>
+                      <p className="text-xs text-slate-500">
+                        Trích yếu: {documentRecord.trich_yeu || 'Chưa có'}
+                      </p>
+                    </div>
                   </button>
                 ))}
               </div>

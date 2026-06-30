@@ -202,7 +202,6 @@ export default function DocumentDetail() {
       setNextFormValues({
         ...values,
         soKyHieu: getNextSoKyHieu(values.soKyHieu),
-        ngayThang: '',
         trichYeu: '',
         soTo: '',
       })
