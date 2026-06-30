@@ -163,6 +163,7 @@ export default function DocumentDetail() {
 
     return {
       soKyHieu: editingDocument.so_ky_hieu || '',
+      isSoKyHieuTangDan: false,
       ngayThang: editingDocument.ngay_thang || '',
       coQuanBanHanh: editingDocument.co_quan_ban_hanh || '',
       trichYeu: editingDocument.trich_yeu || '',
@@ -201,8 +202,9 @@ export default function DocumentDetail() {
       })
       setNextFormValues({
         ...values,
-        // soKyHieu: getNextSoKyHieu(values.soKyHieu),
-        soKyHieu: '',
+        soKyHieu: values.isSoKyHieuTangDan
+          ? getNextSoKyHieu(values.soKyHieu)
+          : '',
         trichYeu: '',
         soTo: '',
       })

@@ -214,7 +214,13 @@ export default function FormSK2() {
     try {
       const savedValues = formSK2Fields.reduce<FormSK2Values>(
         (result, field) => {
-          result[field.name] = getStringValue(values[field.name])
+          const fieldValue = getStringValue(values[field.name])
+
+          result[field.name] = ['fullName', 'healthInsuranceNumber'].includes(
+            field.name
+          )
+            ? fieldValue.toUpperCase()
+            : fieldValue
           return result
         },
         { gender: 'Nữ' }

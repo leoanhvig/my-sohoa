@@ -45,6 +45,24 @@ const HEALTH_FORM_2_COLUMNS = [
   { title: 'Hướng xử trí', field: 'treatmentPlan' },
   { title: 'Nhận xét của Bác Sĩ', field: 'doctorComment' },
 ]
+const HEALTH_FORM_2_EXPORT_COLUMNS = [
+  { title: 'STT/Mã Bệnh Nhân', field: 'patientCode' },
+  { title: 'họ tên', field: 'fullName' },
+  { title: 'địa điểm khám', field: 'clinicLocation' },
+  { title: 'ngày khám', field: 'examDate' },
+  { title: 'Ngày sinh', field: 'birthDate' },
+  { title: 'giới tính', field: 'gender' },
+  { title: 'Số CCCD', field: 'citizenId' },
+  { title: 'Số thẻ BHYT', field: 'healthInsuranceNumber' },
+  { title: 'Nghề nghiệp', field: 'occupation' },
+  { title: 'Khu phố/Ấp', field: 'hamlet' },
+  { title: 'Xã/Phường/Đặc khu', field: 'ward' },
+  { title: 'Tỉnh/TP', field: 'provinceCity' },
+  { title: 'Số điện thoại', field: 'phoneNumber' },
+  { title: 'Kết quả AI', field: 'aiResult' },
+  { title: 'Nhận xét của Bác Sĩ', field: 'doctorComment' },
+  { title: 'Hướng xử trí', field: 'treatmentPlan' },
+]
 const HEALTH_FORM_2_FIELD_TITLES = HEALTH_FORM_2_COLUMNS.map(
   (column) => column.title
 )
@@ -166,10 +184,12 @@ export default function HealthForm2List() {
           getCreatedAtTime(recordB.created_at)
       )
       const rows = sortedRecords.map((record) =>
-        HEALTH_FORM_2_COLUMNS.map((column) => formatValue(record[column.field]))
+        HEALTH_FORM_2_EXPORT_COLUMNS.map((column) =>
+          formatValue(record[column.field])
+        )
       )
       const worksheet = XLSX.utils.aoa_to_sheet([
-        HEALTH_FORM_2_COLUMNS.map((column) => column.title),
+        HEALTH_FORM_2_EXPORT_COLUMNS.map((column) => column.title),
         ...rows,
       ])
       const workbook = XLSX.utils.book_new()

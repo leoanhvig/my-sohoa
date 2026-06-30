@@ -23,10 +23,21 @@ export function DocumentDetailForm({
   onCancel,
 }: DocumentDetailFormProps) {
   const canSubmit = Boolean(values.soTo.trim() && values.trichYeu.trim())
+  const isUpdateMode = Boolean(onCancel)
 
   function updateField(
     field: keyof DocumentRecordFormValues,
     value: string
+  ): void {
+    onChange({
+      ...values,
+      [field]: value,
+    })
+  }
+
+  function updateCheckboxField(
+    field: keyof Pick<DocumentRecordFormValues, 'isSoKyHieuTangDan'>,
+    value: boolean
   ): void {
     onChange({
       ...values,
@@ -61,6 +72,19 @@ export function DocumentDetailForm({
     >
       <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
         <div className="space-y-4">
+          {!isUpdateMode && (
+            <label className="flex h-10 w-fit cursor-pointer items-center gap-2 rounded-md border border-slate-200 bg-slate-50 px-3 text-sm font-bold text-slate-700 shadow-sm">
+              <input
+                type="checkbox"
+                checked={values.isSoKyHieuTangDan}
+                onChange={(event) =>
+                  updateCheckboxField('isSoKyHieuTangDan', event.target.checked)
+                }
+                className="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+              />
+              Số ký hiệu tăng dần
+            </label>
+          )}
           <EditableField
             label="Cơ quan ban hành"
             value={values.coQuanBanHanh}
@@ -72,11 +96,13 @@ export function DocumentDetailForm({
             required
             onChange={(value) => updateField('soTo', value)}
           />
-          <EditableField
-            label="Số, ký hiệu văn bản"
-            value={values.soKyHieu}
-            onChange={(value) => updateField('soKyHieu', value)}
-          />
+          <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
+            <EditableField
+              label="Số, ký hiệu văn bản"
+              value={values.soKyHieu}
+              onChange={(value) => updateField('soKyHieu', value)}
+            />
+          </div>
           <EditableField
             label="Ngày, tháng, năm tài liệu"
             value={values.ngayThang}

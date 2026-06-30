@@ -9,7 +9,7 @@ import {
 } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { getDocumentsByUidFile } from '../apis/document'
+import { getDocumentsByUidFile, getDocumentsCount } from '../apis/document'
 import { FileRecord } from '../apis/file'
 import { getAllUsers, type UserRecord } from '../apis/user'
 import { useAllFiles } from '../hooks/useAllFiles'
@@ -42,6 +42,11 @@ export default function UploadedFiles() {
   const [searchText, setSearchText] = useState('')
   const [exportingFileUid, setExportingFileUid] = useState('')
   const { data: files = [], isLoading, error } = useAllFiles()
+  const { data: totalDocumentRecords = 0, isLoading: isLoadingDocumentsCount } =
+    useQuery<number>({
+      queryKey: ['documents', 'total-count'],
+      queryFn: getDocumentsCount,
+    })
   const { data: users = [] } = useQuery<UserRecord[]>({
     queryKey: ['users', 'all'],
     queryFn: getAllUsers,
@@ -128,6 +133,10 @@ export default function UploadedFiles() {
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
               <div className="rounded-full bg-indigo-50 px-3 py-1 text-sm font-bold text-indigo-700">
                 Tổng: {localFiles.length} bộ file
+              </div>
+              <div className="rounded-full bg-emerald-50 px-3 py-1 text-sm font-bold text-emerald-700">
+                Tổng record documents:{' '}
+                {isLoadingDocumentsCount ? 'Đang tải...' : totalDocumentRecords}
               </div>
               <Button
                 type="button"

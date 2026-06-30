@@ -42,9 +42,9 @@ export function DocumentRecordPanel({
   }, [editingDocument])
 
   return (
-    <aside className="min-h-0 overflow-hidden bg-slate-50 p-4 md:p-6">
+    <aside className="min-h-0 overflow-hidden bg-slate-50 p-4">
       <div className="flex h-full min-h-0 flex-col gap-5">
-        <div className="grid shrink-0 grid-cols-2 rounded-lg border border-slate-200 bg-white p-1 shadow-sm">
+        <div className="grid shrink-0 grid-cols-2 rounded-lg border border-slate-200 bg-white p-1 shadow-sm ">
           <button
             type="button"
             className={
@@ -100,7 +100,7 @@ export function DocumentRecordPanel({
                   >
                     <div className="flex flex-col gap-1">
                       <p className="text-sm font-bold text-slate-900">
-                        {index + 1}.{' '}
+                        {documents.length - index}.{' '}
                         {`${documentRecord.so_ky_hieu}-${documentRecord.so_to}` ||
                           'Chưa có số ký hiệu'}
                       </p>
