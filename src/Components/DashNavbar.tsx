@@ -5,6 +5,7 @@ import { FiEdit2, FiLogOut } from 'react-icons/fi'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { useToast } from '../contexts/ToastContext'
+import { useUserStore } from '../stores/userStore'
 import DropdownMenu, { IMenuOption } from './Atoms/DropdownMenu'
 
 function classNames(...classes: Array<string>) {
@@ -14,17 +15,35 @@ function classNames(...classes: Array<string>) {
 export default function DashNavbar() {
   const { logout } = useAuth()
   const { showError } = useToast()
+  const userRecord = useUserStore((state) => state.userRecord)
+  const canViewHealthForm2 = userRecord?.user_name === 'nhaplieu01'
 
-  const [navigation, setNavigation] = useState([
-    { name: 'Dashboard', href: '/', current: false },
-    { name: 'Upload', href: '/upload', current: false },
-    { name: 'File đã upload', href: '/uploaded-files', current: false },
+  const [navigation, setNavigation] = useState(() => [
+    { name: 'Dashboard', href: '/', current: window.location.pathname === '/' },
+    {
+      name: 'Upload',
+      href: '/upload',
+      current: window.location.pathname === '/upload',
+    },
+    {
+      name: 'File đã upload',
+      href: '/uploaded-files',
+      current: window.location.pathname === '/uploaded-files',
+    },
     // { name: 'Form sức khỏe', href: '/health-form', current: false },
     // { name: 'List HealthForm', href: '/list-healthform', current: false },
   ])
 
   useEffect(() => {
-    const newObj = navigation.map((e) => {
+    const baseNavigation = [
+      { name: 'Dashboard', href: '/' },
+      { name: 'Upload', href: '/upload' },
+      { name: 'File đã upload', href: '/uploaded-files' },
+      ...(canViewHealthForm2
+        ? [{ name: 'Health Form 2', href: '/health-form-2' }]
+        : []),
+    ]
+    const newObj = baseNavigation.map((e) => {
       return {
         name: e.name,
         href: e.href,
@@ -32,7 +51,7 @@ export default function DashNavbar() {
       }
     })
     setNavigation(newObj)
-  }, [window.location.pathname])
+  }, [canViewHealthForm2, window.location.pathname])
 
   const navigate = useNavigate()
 

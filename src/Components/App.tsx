@@ -15,6 +15,7 @@ import Dashboard from './Dashboard'
 import DocumentDetail from './DocumentDetail'
 import FileDetail from './FileDetail'
 import Files from './Files'
+import HealthForm2 from './HealthForm2'
 import Login from './Login'
 import PrivateRoutes from './PrivateRoutes'
 import Signup from './Signup'
@@ -54,6 +55,14 @@ function App() {
               />
               <Route element={<Files />} path="/files" />
               <Route element={<FileDetail />} path="/file/:fileId" />
+              <Route
+                path="/health-form-2"
+                element={
+                  <UploadRoutesGuard>
+                    <HealthForm2 />
+                  </UploadRoutesGuard>
+                }
+              />
               {/* <Route element={<HealthForm />} path="/health-form" />
               <Route
                 element={<HealthForm />}

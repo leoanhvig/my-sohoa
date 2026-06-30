@@ -7,6 +7,7 @@ export default function PrivateRoutes() {
   const location = useLocation()
   const shouldHideNavbar =
     location.pathname.startsWith('/document/') ||
+    location.pathname === '/health-form-2' ||
     /^\/file\/[^/]+(?:\/documents)?$/.test(location.pathname)
 
   return currentUser ? (
