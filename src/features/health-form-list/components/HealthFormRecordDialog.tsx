@@ -12,11 +12,17 @@ import { formatValue } from '../utils'
 interface HealthFormRecordDialogProps {
   record: HealthFormRecord | null
   onOpenChange: (open: boolean) => void
+  title?: string
+  fieldTitles?: string[]
+  fieldNameByTitle?: Record<string, string>
 }
 
 export function HealthFormRecordDialog({
   record,
   onOpenChange,
+  title = 'View HealthForm data',
+  fieldTitles = savedFieldTitles,
+  fieldNameByTitle = savedFieldNameByTitle,
 }: HealthFormRecordDialogProps) {
   if (!record) return null
   return (
@@ -24,7 +30,7 @@ export function HealthFormRecordDialog({
       <DialogContent className="max-h-[90vh] max-w-4xl bg-white overflow-hidden p-0 sm:max-w-4xl">
         <DialogHeader className="border-b border-slate-200  px-6 py-4">
           <DialogTitle className="text-xl font-bold text-slate-900">
-            View HealthForm data
+            {title}
           </DialogTitle>
           <DialogDescription>Record: {record.uid}</DialogDescription>
         </DialogHeader>
@@ -44,17 +50,17 @@ export function HealthFormRecordDialog({
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 bg-white">
-              {savedFieldTitles.map((title, index) => {
-                const fieldName = savedFieldNameByTitle[title]
+              {fieldTitles.map((fieldTitle, index) => {
+                const fieldName = fieldNameByTitle[fieldTitle]
                 const value = fieldName ? record[fieldName] : ''
 
                 return (
-                  <tr key={title}>
+                  <tr key={fieldTitle}>
                     <td className="px-4 py-3 font-semibold text-slate-500">
                       {index + 1}
                     </td>
                     <td className="px-4 py-3 font-bold text-slate-700">
-                      {title}
+                      {fieldTitle}
                     </td>
                     <td className="px-4 py-3 font-medium text-slate-900">
                       {formatValue(value) || '-'}

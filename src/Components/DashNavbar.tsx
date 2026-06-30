@@ -40,7 +40,10 @@ export default function DashNavbar() {
       { name: 'Upload', href: '/upload' },
       { name: 'File đã upload', href: '/uploaded-files' },
       ...(canViewHealthForm2
-        ? [{ name: 'Health Form 2', href: '/health-form-2' }]
+        ? [
+            { name: 'Health Form 2', href: '/health-form-2' },
+            { name: 'List HealthForm 2', href: '/list-healthform2' },
+          ]
         : []),
     ]
     const newObj = baseNavigation.map((e) => {

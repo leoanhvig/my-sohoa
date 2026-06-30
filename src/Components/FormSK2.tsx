@@ -47,6 +47,11 @@ const formSK2Fields: FormSK2Field[] = [
   { name: 'provinceCity', label: 'Tỉnh/TP' },
   { name: 'phoneNumber', label: 'Số điện thoại' },
   {
+    name: 'doctorComment',
+    label: 'Nhận xét của Bác Sĩ',
+    component: 'textarea',
+  },
+  {
     name: 'aiResult',
     label: 'Kết quả AI',
     component: 'select',
@@ -57,11 +62,6 @@ const formSK2Fields: FormSK2Field[] = [
       'Bất thường (Cao)',
       'Không hợp lệ',
     ],
-  },
-  {
-    name: 'doctorComment',
-    label: 'Nhận xét của Bác Sĩ',
-    component: 'textarea',
   },
   {
     name: 'treatmentPlan',

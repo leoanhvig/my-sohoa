@@ -16,6 +16,7 @@ import DocumentDetail from './DocumentDetail'
 import FileDetail from './FileDetail'
 import Files from './Files'
 import HealthForm2 from './HealthForm2'
+import HealthForm2List from './HealthForm2List'
 import Login from './Login'
 import PrivateRoutes from './PrivateRoutes'
 import Signup from './Signup'
@@ -68,7 +69,7 @@ function App() {
                 element={<HealthForm />}
                 path="/health-form/update/:recordId"
               /> */}
-              {/* <Route element={<HealthFormList />} path="/list-healthform" /> */}
+              <Route element={<HealthForm2List />} path="/list-healthform2" />
               {/* <Route path="/update-profile" element={<UpdateProfile />} /> */}
               <Route
                 path="/upload"
