@@ -1,7 +1,7 @@
 import { Button } from '@/Components/ui/button'
 import { FileText, UploadCloud } from 'lucide-react'
 import { ChangeEvent, useEffect, useRef, useState } from 'react'
-import HealthForm from './HealthForm'
+import FormSK2 from './FormSK2'
 
 export default function HealthForm2() {
   const [localPreviewUrl, setLocalPreviewUrl] = useState('')
@@ -75,7 +75,7 @@ export default function HealthForm2() {
       </section>
 
       <section className="h-screen min-h-0 overflow-y-auto bg-slate-50">
-        <HealthForm />
+        <FormSK2 />
       </section>
     </main>
   )
