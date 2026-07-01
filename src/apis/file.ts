@@ -18,6 +18,7 @@ export interface CreateFileRecordParams {
   number_of_file: number
   number_of_file_done?: number
   is_completed?: boolean
+  isExported?: boolean
   enteredByUserId?: string
   relative_path?: string
   storage_path?: string
@@ -41,6 +42,7 @@ export interface UpdateFileRecordParams {
   number_of_file?: number
   number_of_file_done?: number
   is_completed?: boolean
+  isExported?: boolean
   creator_uid?: string
   updated_uid?: string
   storage_provider?: 'firebase_storage'
@@ -54,6 +56,7 @@ export async function createFileRecord({
   number_of_file,
   number_of_file_done = 0,
   is_completed = false,
+  isExported = false,
   enteredByUserId = '',
   relative_path = '',
   storage_path = '',
@@ -70,6 +73,7 @@ export async function createFileRecord({
     number_of_file,
     number_of_file_done,
     is_completed,
+    isExported,
     enteredByUserId,
     relative_path,
     storage_path,
@@ -252,6 +256,7 @@ export async function updateFileRecordInfo({
   number_of_file,
   number_of_file_done,
   is_completed,
+  isExported,
   creator_uid,
   updated_uid,
   storage_provider,
@@ -263,6 +268,7 @@ export async function updateFileRecordInfo({
       number_of_file,
       number_of_file_done,
       is_completed,
+      isExported,
       creator_uid,
       updated_uid,
       storage_provider,

@@ -64,6 +64,14 @@ function App() {
                   </UploadRoutesGuard>
                 }
               />
+              <Route
+                path="/health-form-2/update/:recordId"
+                element={
+                  <UploadRoutesGuard>
+                    <HealthForm2 />
+                  </UploadRoutesGuard>
+                }
+              />
               {/* <Route element={<HealthForm />} path="/health-form" />
               <Route
                 element={<HealthForm />}

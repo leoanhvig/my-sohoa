@@ -1,10 +1,15 @@
-import { addHealthFormRecord } from '@/apis/healthForm2'
+import {
+  addHealthFormRecord,
+  getHealthFormRecordById,
+  updateHealthFormRecord,
+} from '@/apis/healthForm2'
 import { Button } from '@/Components/ui/button'
 import { EToastTypes, useToast } from '@/contexts/ToastContext'
 import { useUserStore } from '@/stores/userStore'
-import { useQueryClient } from '@tanstack/react-query'
-import { useState } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
+import { useNavigate, useParams } from 'react-router-dom'
 
 type FormSK2Value = string | string[]
 type FormSK2Values = Record<string, FormSK2Value>
@@ -87,6 +92,29 @@ const defaultFormSK2Values: FormSK2Values = {
 
 function getStringValue(value: FormSK2Value | undefined) {
   return Array.isArray(value) ? value.join(', ') : value || ''
+}
+
+function getFormValue(value: unknown): FormSK2Value {
+  if (Array.isArray(value)) {
+    return value.map((item) => String(item))
+  }
+
+  if (value === null || value === undefined || typeof value === 'object') {
+    return ''
+  }
+
+  return String(value)
+}
+
+function getFormValuesFromRecord(record: Record<string, unknown>) {
+  return {
+    ...defaultFormSK2Values,
+    ...formSK2Fields.reduce<FormSK2Values>((result, field) => {
+      result[field.name] = getFormValue(record[field.name])
+      return result
+    }, {}),
+    gender: getFormValue(record.gender) || 'Nữ',
+  }
 }
 
 function FieldInput({
@@ -188,20 +216,40 @@ function FieldInput({
 }
 
 export default function FormSK2() {
+  const navigate = useNavigate()
+  const { recordId } = useParams()
   const authUser = useUserStore((state) => state.authUser)
   const queryClient = useQueryClient()
   const { showError, showTypedToast } = useToast()
   const [isSaving, setIsSaving] = useState(false)
+  const isUpdateMode = Boolean(recordId)
+  const {
+    data: updateRecord,
+    isLoading: isLoadingUpdateRecord,
+    error: updateRecordError,
+  } = useQuery({
+    queryKey: ['health-form-2', 'record', recordId],
+    queryFn: () => getHealthFormRecordById(recordId || ''),
+    enabled: isUpdateMode,
+    staleTime: 3 * 60 * 1000,
+  })
   const {
     handleSubmit,
     register,
     reset,
     setValue,
+    setFocus,
     watch,
     formState: { errors },
   } = useForm<FormSK2Values>({
     defaultValues: defaultFormSK2Values,
   })
+
+  useEffect(() => {
+    if (updateRecord) {
+      reset(getFormValuesFromRecord(updateRecord))
+    }
+  }, [reset, updateRecord])
 
   async function onSubmit(values: FormSK2Values) {
     if (!authUser?.uid) {
@@ -215,27 +263,49 @@ export default function FormSK2() {
       const savedValues = formSK2Fields.reduce<FormSK2Values>(
         (result, field) => {
           const fieldValue = getStringValue(values[field.name])
+          const normalizedFieldValue =
+            field.name === 'provinceCity' && !fieldValue.trim()
+              ? 'TP. Hồ Chí Minh'
+              : fieldValue
 
           result[field.name] = ['fullName', 'healthInsuranceNumber'].includes(
             field.name
           )
-            ? fieldValue.toUpperCase()
-            : fieldValue
+            ? normalizedFieldValue.toUpperCase()
+            : normalizedFieldValue
           return result
         },
         { gender: 'Nữ' }
       )
 
-      await addHealthFormRecord({
-        ...savedValues,
-        creator: authUser.uid,
-      })
-      await queryClient.invalidateQueries({ queryKey: ['health-form'] })
-      showTypedToast(EToastTypes.SUCCESS, 'Đã lưu thông tin SK2')
-      reset(defaultFormSK2Values)
+      if (isUpdateMode && recordId) {
+        await updateHealthFormRecord(recordId, {
+          ...savedValues,
+          creator: updateRecord?.creator || authUser.uid,
+        })
+        await queryClient.invalidateQueries({ queryKey: ['health-form-2'] })
+        showTypedToast(EToastTypes.SUCCESS, 'Đã cập nhật thông tin SK2')
+        navigate('/list-healthform2')
+      } else {
+        await addHealthFormRecord({
+          ...savedValues,
+          creator: authUser.uid,
+        })
+        await queryClient.invalidateQueries({ queryKey: ['health-form-2'] })
+        showTypedToast(EToastTypes.SUCCESS, 'Đã lưu thông tin SK2')
+        reset({
+          ...defaultFormSK2Values,
+          clinicLocation: values.clinicLocation,
+          examDate: values.examDate,
+          aiResult: values.aiResult,
+        })
+        setFocus('patientCode')
+      }
     } catch (error) {
       showError(
-        'Không thêm được thông tin vào cơ sở dữ liệu. Vui lòng thử lại.'
+        isUpdateMode
+          ? 'Không cập nhật được thông tin. Vui lòng thử lại.'
+          : 'Không thêm được thông tin vào cơ sở dữ liệu. Vui lòng thử lại.'
       )
     } finally {
       setIsSaving(false)
@@ -249,6 +319,15 @@ export default function FormSK2() {
         className="mx-auto max-w-7xl space-y-6"
       >
         <section className="bg-white p-6 shadow-sm">
+          {isUpdateMode ? (
+            <div className="mb-6 rounded-lg border border-indigo-100 bg-indigo-50 px-4 py-3 text-sm font-semibold text-indigo-700">
+              {isLoadingUpdateRecord
+                ? 'Đang tải dữ liệu cần cập nhật...'
+                : updateRecordError || !updateRecord
+                ? 'Không tìm thấy dữ liệu cần cập nhật.'
+                : 'Cập nhật thông tin SK2'}
+            </div>
+          ) : null}
           {formSK2Fields.length > 0 ? (
             <div className="grid gap-5 md:grid-cols-2">
               {formSK2Fields.map((field) => (
@@ -291,10 +370,21 @@ export default function FormSK2() {
         <div className="flex justify-end gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
           <Button
             type="submit"
-            disabled={isSaving || formSK2Fields.length === 0}
+            disabled={
+              isSaving ||
+              formSK2Fields.length === 0 ||
+              isLoadingUpdateRecord ||
+              (isUpdateMode && !updateRecord)
+            }
             className="h-11 rounded-lg bg-indigo-600 px-8 text-base font-bold text-white shadow-lg shadow-indigo-200 transition hover:bg-indigo-700 hover:shadow-indigo-300 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {isSaving ? 'Đang lưu...' : 'Lưu thông tin'}
+            {isSaving
+              ? isUpdateMode
+                ? 'Đang cập nhật...'
+                : 'Đang lưu...'
+              : isUpdateMode
+              ? 'Cập nhật thông tin'
+              : 'Lưu thông tin'}
           </Button>
         </div>
       </form>

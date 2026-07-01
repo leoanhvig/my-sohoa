@@ -13,6 +13,7 @@ type EditableFileValues = {
   file_name: string
   number_of_file: string
   number_of_file_done: string
+  isExported: boolean
   creator_uid: string
   updated_uid: string
   storage_provider: 'firebase_storage'
@@ -23,6 +24,7 @@ function toEditableFileValues(fileRecord: FileRecord): EditableFileValues {
     file_name: fileRecord.file_name || '',
     number_of_file: String(fileRecord.number_of_file || 0),
     number_of_file_done: String(fileRecord.number_of_file_done || 0),
+    isExported: Boolean(fileRecord.isExported),
     creator_uid: fileRecord.creator_uid || '',
     updated_uid: fileRecord.updated_uid || '',
     storage_provider: fileRecord.storage_provider || 'firebase_storage',
@@ -84,7 +86,7 @@ export default function FileDetail() {
 
   function updateEditableFileValue(
     field: keyof EditableFileValues,
-    value: string
+    value: string | boolean
   ) {
     setEditableFileValues((currentValues) => {
       const fallbackValues = fileRecord
@@ -93,6 +95,7 @@ export default function FileDetail() {
             file_name: '',
             number_of_file: '0',
             number_of_file_done: '0',
+            isExported: false,
             creator_uid: '',
             updated_uid: '',
             storage_provider: 'firebase_storage' as const,
@@ -115,6 +118,7 @@ export default function FileDetail() {
       file_name: editableFileValues.file_name,
       number_of_file: Number(editableFileValues.number_of_file || 0),
       number_of_file_done: Number(editableFileValues.number_of_file_done || 0),
+      isExported: editableFileValues.isExported,
       creator_uid: editableFileValues.creator_uid,
       updated_uid: editableFileValues.updated_uid,
       storage_provider: editableFileValues.storage_provider,
@@ -203,6 +207,20 @@ export default function FileDetail() {
                           updateEditableFileValue('number_of_file_done', value)
                         }
                       />
+                      <label className="flex h-10 items-center gap-3 rounded-md border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 sm:mt-6">
+                        <input
+                          type="checkbox"
+                          checked={editableFileValues.isExported}
+                          onChange={(event) =>
+                            updateEditableFileValue(
+                              'isExported',
+                              event.target.checked
+                            )
+                          }
+                          className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-600"
+                        />
+                        Đã export
+                      </label>
                       <EditableField
                         label="Creator UID"
                         value={editableFileValues.creator_uid}

@@ -1,5 +1,6 @@
 import {
   collection,
+  deleteDoc,
   doc,
   getDoc,
   getDocs,
@@ -88,6 +89,12 @@ export async function updateDocumentRecord({
     trich_yeu,
     updated_at: serverTimestamp(),
   })
+}
+
+export async function deleteDocumentRecord(documentUid: string): Promise<void> {
+  const documentRef = doc(db, DOCUMENTS_COLLECTION, documentUid)
+
+  await deleteDoc(documentRef)
 }
 
 export async function getDocumentsByUidFile(

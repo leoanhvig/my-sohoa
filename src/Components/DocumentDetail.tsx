@@ -1,5 +1,6 @@
 import {
   createDocumentRecord,
+  deleteDocumentRecord,
   getDocumentByUid,
   getDocumentsByUidFile,
   updateDocumentRecord,
@@ -37,6 +38,20 @@ function getNextSoKyHieu(soKyHieu: string): string {
   )}`
 }
 
+function getNextSoTo(soTo: string): string {
+  const currentNumber = Number(soTo)
+
+  if (!Number.isFinite(currentNumber)) {
+    return soTo
+  }
+
+  const nextNumber = currentNumber + 1
+
+  return nextNumber < 10
+    ? String(nextNumber).padStart(2, '0')
+    : String(nextNumber)
+}
+
 function normalizePdfFileName(fileName: string): string {
   return fileName
     .trim()
@@ -61,6 +76,9 @@ export default function DocumentDetail() {
   const [previewPage, setPreviewPage] = useState<number | null>(null)
   const [localPreviewUrl, setLocalPreviewUrl] = useState('')
   const [isSavingDocument, setIsSavingDocument] = useState(false)
+  const [deletingDocumentUid, setDeletingDocumentUid] = useState<string | null>(
+    null
+  )
   const uploadInputRef = useRef<HTMLInputElement | null>(null)
   const { showTypedToast } = useToast()
   const { updateFileRecord, isUpdatingFileRecord } = useUpdateFileRecord()
@@ -164,6 +182,7 @@ export default function DocumentDetail() {
     return {
       soKyHieu: editingDocument.so_ky_hieu || '',
       isSoKyHieuTangDan: false,
+      isSoToTangDan: false,
       ngayThang: editingDocument.ngay_thang || '',
       coQuanBanHanh: editingDocument.co_quan_ban_hanh || '',
       trichYeu: editingDocument.trich_yeu || '',
@@ -206,7 +225,7 @@ export default function DocumentDetail() {
           ? getNextSoKyHieu(values.soKyHieu)
           : '',
         trichYeu: '',
-        soTo: '',
+        soTo: values.isSoToTangDan ? getNextSoTo(values.soTo) : '',
       })
       if (isFileCompleted) {
         showTypedToast(
@@ -246,6 +265,52 @@ export default function DocumentDetail() {
       throw err
     } finally {
       setIsSavingDocument(false)
+    }
+  }
+
+  async function handleDelete(documentToDelete: DocumentRecord) {
+    const confirmed = window.confirm(
+      'Bạn có chắc muốn xóa record document này không?'
+    )
+
+    if (!confirmed) return
+
+    try {
+      setDeletingDocumentUid(documentToDelete.uid)
+      await deleteDocumentRecord(documentToDelete.uid)
+
+      if (fileRecord) {
+        const nextDonePages = Math.max(
+          (fileRecord.number_of_file_done || 0) - 1,
+          0
+        )
+
+        await updateFileRecord({
+          uid: fileRecord.uid,
+          number_of_file_done: nextDonePages,
+          is_completed:
+            (fileRecord.number_of_file || 0) > 0 &&
+            nextDonePages >= (fileRecord.number_of_file || 0),
+        })
+      }
+
+      await queryClient.invalidateQueries({
+        queryKey: ['documents', 'by-file', documentToDelete.uid_file],
+      })
+
+      if (editingDocument?.uid === documentToDelete.uid) {
+        setEditingDocument(null)
+      }
+
+      showTypedToast(EToastTypes.SUCCESS, 'Đã xóa record document')
+    } catch (err) {
+      console.error('Không xóa được document:', err)
+      showTypedToast(
+        EToastTypes.ERROR,
+        'Không xóa được record document. Vui lòng thử lại.'
+      )
+    } finally {
+      setDeletingDocumentUid(null)
     }
   }
 
@@ -340,8 +405,10 @@ export default function DocumentDetail() {
             onApprove={handleApprove}
             onUpdate={handleUpdate}
             onStartUpdate={setEditingDocument}
+            onDelete={handleDelete}
             onCancelUpdate={() => setEditingDocument(null)}
             isSaving={isUpdatingFileRecord || isSavingDocument}
+            deletingDocumentUid={deletingDocumentUid}
           />
         )}
       </div>

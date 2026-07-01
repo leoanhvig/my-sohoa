@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   Download,
   Eye,
@@ -10,7 +10,7 @@ import {
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getDocumentsByUidFile, getDocumentsCount } from '../apis/document'
-import { FileRecord } from '../apis/file'
+import { FileRecord, updateFileRecordInfo } from '../apis/file'
 import { getAllUsers, type UserRecord } from '../apis/user'
 import { useAllFiles } from '../hooks/useAllFiles'
 import { Button } from './ui/button'
@@ -39,6 +39,7 @@ function getSafeExcelFileName(fileName: string): string {
 
 export default function UploadedFiles() {
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const [searchText, setSearchText] = useState('')
   const [exportingFileUid, setExportingFileUid] = useState('')
   const { data: files = [], isLoading, error } = useAllFiles()
@@ -108,6 +109,11 @@ export default function UploadedFiles() {
 
       XLSX.utils.book_append_sheet(workbook, worksheet, 'Documents')
       XLSX.writeFile(workbook, `${getSafeExcelFileName(file.file_name)}.xlsx`)
+      await updateFileRecordInfo({
+        uid: file.uid,
+        isExported: true,
+      })
+      await queryClient.invalidateQueries({ queryKey: ['files', 'all'] })
     } catch (err) {
       console.error('Không export được file documents:', err)
     } finally {
@@ -190,6 +196,9 @@ export default function UploadedFiles() {
                   <th className="px-6 py-3 text-left font-bold text-slate-600">
                     Người nhập
                   </th>
+                  <th className="px-6 py-3 text-left font-bold text-slate-600">
+                    Đã export
+                  </th>
                   <th className="px-6 py-3 text-right font-bold text-slate-600">
                     Hành động
                   </th>
@@ -198,7 +207,7 @@ export default function UploadedFiles() {
               <tbody className="divide-y divide-slate-100 bg-white">
                 {isLoading ? (
                   <tr>
-                    <td colSpan={5} className="px-6 py-10 text-center">
+                    <td colSpan={6} className="px-6 py-10 text-center">
                       <span className="inline-flex items-center gap-2 font-semibold text-slate-500">
                         <Loader2 className="h-4 w-4 animate-spin" /> Đang tải...
                       </span>
@@ -250,6 +259,13 @@ export default function UploadedFiles() {
                           {userNameByUid.get(file.enteredByUserId) ||
                             'Chưa có người nhập'}
                         </td>
+                        <td className="px-6 py-4">
+                          {file.isExported ? (
+                            <span className="inline-flex rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700 ring-1 ring-inset ring-emerald-200">
+                              Exported
+                            </span>
+                          ) : null}
+                        </td>
                         <td className="space-x-2 px-6 py-4 text-right">
                           <Button
                             type="button"
@@ -280,7 +296,7 @@ export default function UploadedFiles() {
                 ) : (
                   <tr>
                     <td
-                      colSpan={5}
+                      colSpan={6}
                       className="px-6 py-10 text-center text-sm font-semibold text-slate-500"
                     >
                       Chưa có file PDF local nào được upload.
