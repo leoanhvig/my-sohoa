@@ -1,10 +1,17 @@
 import { Button } from '@/Components/ui/button'
+import { HealthFormRecord } from '@/apis/healthForm2'
 import { FileText, UploadCloud } from 'lucide-react'
 import { ChangeEvent, useEffect, useRef, useState } from 'react'
 import FormSK2 from './FormSK2'
+import HealthForm2List from './HealthForm2List'
+
+type HealthForm2Tab = 'form' | 'records'
 
 export default function HealthForm2() {
   const [localPreviewUrl, setLocalPreviewUrl] = useState('')
+  const [activeTab, setActiveTab] = useState<HealthForm2Tab>('form')
+  const [selectedUpdateRecord, setSelectedUpdateRecord] =
+    useState<HealthFormRecord | null>(null)
   const uploadInputRef = useRef<HTMLInputElement | null>(null)
 
   useEffect(() => {
@@ -32,6 +39,11 @@ export default function HealthForm2() {
 
       return objectUrl
     })
+  }
+
+  function handleSelectRecordForUpdate(record: HealthFormRecord) {
+    setSelectedUpdateRecord(record)
+    setActiveTab('form')
   }
 
   return (
@@ -74,8 +86,48 @@ export default function HealthForm2() {
         )}
       </section>
 
-      <section className="h-screen min-h-0 overflow-y-auto bg-slate-50">
-        <FormSK2 />
+      <section className="flex h-screen min-h-0 flex-col bg-slate-50">
+        <div className="sticky top-0 z-10 border-b border-slate-200 bg-white px-4 py-3 shadow-sm">
+          <div className="grid grid-cols-2 rounded-xl bg-slate-100 p-1">
+            <button
+              type="button"
+              className={`rounded-lg px-4 py-2 text-sm font-bold transition ${
+                activeTab === 'form'
+                  ? 'bg-indigo-600 text-white shadow-sm'
+                  : 'text-slate-600 hover:bg-white hover:text-slate-900'
+              }`}
+              onClick={() => setActiveTab('form')}
+            >
+              Form SK2
+            </button>
+            <button
+              type="button"
+              className={`rounded-lg px-4 py-2 text-sm font-bold transition ${
+                activeTab === 'records'
+                  ? 'bg-indigo-600 text-white shadow-sm'
+                  : 'text-slate-600 hover:bg-white hover:text-slate-900'
+              }`}
+              onClick={() => setActiveTab('records')}
+            >
+              Records HealthForm2
+            </button>
+          </div>
+        </div>
+
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          {activeTab === 'form' ? (
+            <FormSK2
+              updateRecordOverride={selectedUpdateRecord}
+              onUpdateSuccess={() => setSelectedUpdateRecord(null)}
+            />
+          ) : (
+            <HealthForm2List
+              embedded
+              filterRecordsByExamInfo
+              onSelectRecordForUpdate={handleSelectRecordForUpdate}
+            />
+          )}
+        </div>
       </section>
     </main>
   )

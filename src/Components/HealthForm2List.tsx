@@ -1,32 +1,21 @@
 import {
   deleteHealthFormRecord,
   getHealthFormRecordsByCreator,
-  getHealthFormRecordsByCreatorAndExamInfo,
   HealthFormRecord,
 } from '@/apis/healthForm2'
 import { Button } from '@/Components/ui/button'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/Components/ui/select'
 import { EToastTypes, useToast } from '@/contexts/ToastContext'
 import { HealthFormRecordDialog } from '@/features/health-form-list/components/HealthFormRecordDialog'
 import { useUserStore } from '@/stores/userStore'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Eye, Loader2, Pencil, Trash2 } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import HealthForm2RecordsToolbar, {
+  HealthForm2RecordsFilters,
+} from './HealthForm2RecordsToolbar'
 
 const RECORDS_PER_PAGE = 100
-const CLINIC_LOCATION_OPTIONS = [
-  'Nhà VH Lao Động Thuận An',
-  'Nhà VH Lao Động Bến Cát',
-  'Nhà VH Lao Động Phú Mỹ',
-]
-const EXAM_DATE_OPTIONS = ['23/5/26', '24/5/26', '30/5/26', '31/5/26']
 const HEALTH_FORM_2_COLUMNS = [
   { title: 'STT/Mã Bệnh Nhân', field: 'patientCode' },
   { title: 'Địa điểm', field: 'clinicLocation' },
@@ -45,24 +34,6 @@ const HEALTH_FORM_2_COLUMNS = [
   { title: 'Hướng xử trí', field: 'treatmentPlan' },
   { title: 'Nhận xét của Bác Sĩ', field: 'doctorComment' },
 ]
-const HEALTH_FORM_2_EXPORT_COLUMNS = [
-  { title: 'STT/Mã Bệnh Nhân', field: 'patientCode' },
-  { title: 'họ tên', field: 'fullName' },
-  { title: 'địa điểm khám', field: 'clinicLocation' },
-  { title: 'ngày khám', field: 'examDate' },
-  { title: 'Ngày sinh', field: 'birthDate' },
-  { title: 'giới tính', field: 'gender' },
-  { title: 'Số CCCD', field: 'citizenId' },
-  { title: 'Số thẻ BHYT', field: 'healthInsuranceNumber' },
-  { title: 'Nghề nghiệp', field: 'occupation' },
-  { title: 'Khu phố/Ấp', field: 'hamlet' },
-  { title: 'Xã/Phường/Đặc khu', field: 'ward' },
-  { title: 'Tỉnh/TP', field: 'provinceCity' },
-  { title: 'Số điện thoại', field: 'phoneNumber' },
-  { title: 'Kết quả AI', field: 'aiResult' },
-  { title: 'Nhận xét của Bác Sĩ', field: 'doctorComment' },
-  { title: 'Hướng xử trí', field: 'treatmentPlan' },
-]
 const HEALTH_FORM_2_FIELD_TITLES = HEALTH_FORM_2_COLUMNS.map(
   (column) => column.title
 )
@@ -72,6 +43,12 @@ const HEALTH_FORM_2_FIELD_NAME_BY_TITLE = HEALTH_FORM_2_COLUMNS.reduce<
   result[column.title] = column.field
   return result
 }, {})
+
+type HealthForm2ListProps = {
+  embedded?: boolean
+  filterRecordsByExamInfo?: boolean
+  onSelectRecordForUpdate?: (record: HealthFormRecord) => void
+}
 
 type TimestampLike = {
   toDate: () => Date
@@ -94,15 +71,6 @@ function formatValue(value: unknown): string {
   return String(value)
 }
 
-function getCreatedAtTime(value: unknown): number {
-  if (hasToDate(value)) return value.toDate().getTime()
-  if (value instanceof Date) return value.getTime()
-  if (typeof value === 'number') return value
-  if (typeof value === 'string') return new Date(value).getTime()
-
-  return 0
-}
-
 function useHealthForm2Records(creator?: string) {
   return useQuery({
     queryKey: ['health-form-2', 'records', creator],
@@ -115,15 +83,21 @@ function useHealthForm2Records(creator?: string) {
   })
 }
 
-export default function HealthForm2List() {
+export default function HealthForm2List({
+  embedded = false,
+  filterRecordsByExamInfo = false,
+  onSelectRecordForUpdate,
+}: HealthForm2ListProps = {}) {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const authUser = useUserStore((state) => state.authUser)
   const { showError, showTypedToast } = useToast()
-  const [selectedClinicLocation, setSelectedClinicLocation] = useState('')
-  const [selectedExamDate, setSelectedExamDate] = useState('')
+  const [selectedFilters, setSelectedFilters] =
+    useState<HealthForm2RecordsFilters>({
+      clinicLocation: '',
+      examDate: '',
+    })
   const [currentPage, setCurrentPage] = useState(1)
-  const [isExporting, setIsExporting] = useState(false)
   const [viewRecord, setViewRecord] = useState<HealthFormRecord | null>(null)
   const [deletingRecordId, setDeletingRecordId] = useState('')
   const effectiveCreator = authUser?.uid || ''
@@ -132,83 +106,52 @@ export default function HealthForm2List() {
     isLoading,
     error,
   } = useHealthForm2Records(effectiveCreator)
-  const totalPages = Math.max(1, Math.ceil(records.length / RECORDS_PER_PAGE))
+  const displayedRecords = useMemo(() => {
+    if (!filterRecordsByExamInfo) return records
+
+    return records.filter((record) => {
+      const matchesClinicLocation = selectedFilters.clinicLocation
+        ? record.clinicLocation === selectedFilters.clinicLocation
+        : true
+      const matchesExamDate = selectedFilters.examDate
+        ? record.examDate === selectedFilters.examDate
+        : true
+
+      return matchesClinicLocation && matchesExamDate
+    })
+  }, [filterRecordsByExamInfo, records, selectedFilters])
+  const totalPages = Math.max(
+    1,
+    Math.ceil(displayedRecords.length / RECORDS_PER_PAGE)
+  )
   const paginatedRecords = useMemo(() => {
     const startIndex = (currentPage - 1) * RECORDS_PER_PAGE
 
-    return records.slice(startIndex, startIndex + RECORDS_PER_PAGE)
-  }, [currentPage, records])
+    return displayedRecords.slice(startIndex, startIndex + RECORDS_PER_PAGE)
+  }, [currentPage, displayedRecords])
   const startRecord =
-    records.length === 0 ? 0 : (currentPage - 1) * RECORDS_PER_PAGE + 1
-  const endRecord = Math.min(currentPage * RECORDS_PER_PAGE, records.length)
+    displayedRecords.length === 0 ? 0 : (currentPage - 1) * RECORDS_PER_PAGE + 1
+  const endRecord = Math.min(
+    currentPage * RECORDS_PER_PAGE,
+    displayedRecords.length
+  )
 
   useEffect(() => {
     setCurrentPage(1)
   }, [effectiveCreator])
 
   useEffect(() => {
+    setCurrentPage(1)
+  }, [selectedFilters])
+
+  useEffect(() => {
     setCurrentPage((page) => Math.min(page, totalPages))
   }, [totalPages])
 
-  async function handleExportExcel() {
-    if (!effectiveCreator) {
-      showError('Bạn cần đăng nhập trước khi export.')
-      return
-    }
-
-    if (!selectedClinicLocation || !selectedExamDate) {
-      showError('Vui lòng chọn địa điểm khám và ngày khám để export.')
-      return
-    }
-
-    setIsExporting(true)
-
-    try {
-      const [exportRecords, XLSX] = await Promise.all([
-        getHealthFormRecordsByCreatorAndExamInfo({
-          creator: effectiveCreator,
-          clinicLocation: selectedClinicLocation,
-          examDate: selectedExamDate,
-        }),
-        import('xlsx'),
-      ])
-
-      if (exportRecords.length === 0) {
-        showError('Không có dữ liệu HealthForm2 theo địa điểm và ngày đã chọn.')
-        return
-      }
-
-      const sortedRecords = [...exportRecords].sort(
-        (recordA, recordB) =>
-          getCreatedAtTime(recordA.created_at) -
-          getCreatedAtTime(recordB.created_at)
-      )
-      const rows = sortedRecords.map((record) =>
-        HEALTH_FORM_2_EXPORT_COLUMNS.map((column) =>
-          formatValue(record[column.field])
-        )
-      )
-      const worksheet = XLSX.utils.aoa_to_sheet([
-        HEALTH_FORM_2_EXPORT_COLUMNS.map((column) => column.title),
-        ...rows,
-      ])
-      const workbook = XLSX.utils.book_new()
-
-      XLSX.utils.book_append_sheet(workbook, worksheet, 'HealthForm2')
-      XLSX.writeFile(
-        workbook,
-        `healthform2-${selectedClinicLocation}-${selectedExamDate}.xlsx`.replace(
-          /[\\/:*?"<>|]/g,
-          '-'
-        )
-      )
-      showTypedToast(EToastTypes.SUCCESS, 'Đã export dữ liệu HealthForm2')
-    } catch (exportError) {
-      showError('Không export được dữ liệu HealthForm2. Vui lòng thử lại.')
-    } finally {
-      setIsExporting(false)
-    }
-  }
+  const handleFiltersChange = useCallback(
+    (filters: HealthForm2RecordsFilters) => setSelectedFilters(filters),
+    []
+  )
 
   function handlePreviousPage() {
     setCurrentPage((page) => Math.max(1, page - 1))
@@ -216,6 +159,15 @@ export default function HealthForm2List() {
 
   function handleNextPage() {
     setCurrentPage((page) => Math.min(totalPages, page + 1))
+  }
+
+  function handleUpdateRecord(record: HealthFormRecord) {
+    if (embedded && onSelectRecordForUpdate) {
+      onSelectRecordForUpdate(record)
+      return
+    }
+
+    navigate(`/health-form-2/update/${record.uid}`)
   }
 
   async function handleDeleteRecord(recordId: string) {
@@ -239,73 +191,52 @@ export default function HealthForm2List() {
   }
 
   return (
-    <main className="min-h-screen bg-slate-50 px-4 py-8 text-slate-900 sm:px-6 lg:px-8">
-      <div className="mx-auto max-w-7xl space-y-6">
-        <section className="grid gap-4 sm:grid-cols-2">
-          <div className="rounded-xl border border-indigo-100 bg-white p-6 shadow-sm">
-            <p className="text-sm font-semibold text-slate-500">
-              Tổng dữ liệu HealthForm2 bạn đã nhập
-            </p>
-            <div className="mt-3 flex items-end gap-2">
-              <span className="text-3xl font-bold tracking-tight text-indigo-700">
-                {records.length}
-              </span>
-              <span className="pb-1 text-sm font-semibold text-slate-500">
-                record
-              </span>
+    <main
+      className={
+        embedded
+          ? 'bg-slate-50 px-4 py-4 text-slate-900'
+          : 'min-h-screen bg-slate-50 px-4 py-8 text-slate-900 sm:px-6 lg:px-8'
+      }
+    >
+      <div className={embedded ? 'space-y-4' : 'mx-auto max-w-7xl space-y-6'}>
+        {!embedded && (
+          <section className="grid gap-4 sm:grid-cols-2">
+            <div className="rounded-xl border border-indigo-100 bg-white p-6 shadow-sm">
+              <p className="text-sm font-semibold text-slate-500">
+                {filterRecordsByExamInfo
+                  ? 'Dữ liệu HealthForm2 theo địa điểm/ngày khám'
+                  : 'Tổng dữ liệu HealthForm2 bạn đã nhập'}
+              </p>
+              <div className="mt-3 flex items-end gap-2">
+                <span className="text-3xl font-bold tracking-tight text-indigo-700">
+                  {displayedRecords.length}
+                </span>
+                <span className="pb-1 text-sm font-semibold text-slate-500">
+                  / {records.length} record
+                </span>
+              </div>
             </div>
-          </div>
 
-          <div className="rounded-xl border border-emerald-100 bg-white p-6 shadow-sm">
-            <p className="text-sm font-semibold text-slate-500">
-              Trang hiện tại
-            </p>
-            <div className="mt-3 flex items-end gap-2">
-              <span className="text-3xl font-bold tracking-tight text-emerald-700">
-                {currentPage}/{totalPages}
-              </span>
+            <div className="rounded-xl border border-emerald-100 bg-white p-6 shadow-sm">
+              <p className="text-sm font-semibold text-slate-500">
+                Trang hiện tại
+              </p>
+              <div className="mt-3 flex items-end gap-2">
+                <span className="text-3xl font-bold tracking-tight text-emerald-700">
+                  {currentPage}/{totalPages}
+                </span>
+              </div>
             </div>
-          </div>
-        </section>
+          </section>
+        )}
 
-        <div className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-end">
-          <Select
-            value={selectedClinicLocation}
-            onValueChange={setSelectedClinicLocation}
-          >
-            <SelectTrigger className="w-full bg-white sm:w-72">
-              <SelectValue placeholder="Chọn địa điểm khám" />
-            </SelectTrigger>
-            <SelectContent position="popper" align="start" className="w-72">
-              {CLINIC_LOCATION_OPTIONS.map((location) => (
-                <SelectItem key={location} value={location}>
-                  {location}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select value={selectedExamDate} onValueChange={setSelectedExamDate}>
-            <SelectTrigger className="w-full bg-white sm:w-44">
-              <SelectValue placeholder="Chọn ngày khám" />
-            </SelectTrigger>
-            <SelectContent position="popper" align="start" className="w-44">
-              {EXAM_DATE_OPTIONS.map((examDate) => (
-                <SelectItem key={examDate} value={examDate}>
-                  {examDate}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Button
-            type="button"
-            size="lg"
-            variant="outline"
-            onClick={handleExportExcel}
-            disabled={isExporting}
-          >
-            {isExporting ? 'Đang export...' : 'Export Excel'}
-          </Button>
-        </div>
+        {!embedded && (
+          <HealthForm2RecordsToolbar
+            filterRecordsByExamInfo={filterRecordsByExamInfo}
+            creator={effectiveCreator}
+            onFiltersChange={handleFiltersChange}
+          />
+        )}
 
         <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
           {error ? (
@@ -357,34 +288,54 @@ export default function HealthForm2List() {
                             type="button"
                             size="sm"
                             variant="outline"
+                            title="View data"
+                            aria-label="View data"
                             onClick={() => setViewRecord(record)}
                           >
-                            <Eye className="mr-2 h-4 w-4" /> View data
+                            <Eye
+                              className={embedded ? 'h-4 w-4' : 'mr-2 h-4 w-4'}
+                            />
+                            {embedded ? null : 'View data'}
                           </Button>
                           <Button
                             type="button"
                             size="sm"
                             variant="outline"
-                            onClick={() =>
-                              navigate(`/health-form-2/update/${record.uid}`)
-                            }
+                            title="Update"
+                            aria-label="Update"
+                            onClick={() => handleUpdateRecord(record)}
                           >
-                            <Pencil className="mr-2 h-4 w-4" /> Update
+                            <Pencil
+                              className={embedded ? 'h-4 w-4' : 'mr-2 h-4 w-4'}
+                            />
+                            {embedded ? null : 'Update'}
                           </Button>
                           <Button
                             type="button"
                             size="sm"
                             variant="outline"
                             className="border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
+                            title="Delete"
+                            aria-label="Delete"
                             onClick={() => handleDeleteRecord(record.uid)}
                             disabled={deletingRecordId === record.uid}
                           >
                             {deletingRecordId === record.uid ? (
-                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              <Loader2
+                                className={
+                                  embedded
+                                    ? 'h-4 w-4 animate-spin'
+                                    : 'mr-2 h-4 w-4 animate-spin'
+                                }
+                              />
                             ) : (
-                              <Trash2 className="mr-2 h-4 w-4" />
+                              <Trash2
+                                className={
+                                  embedded ? 'h-4 w-4' : 'mr-2 h-4 w-4'
+                                }
+                              />
                             )}
-                            Delete
+                            {embedded ? null : 'Delete'}
                           </Button>
                         </div>
                       </td>
@@ -405,7 +356,9 @@ export default function HealthForm2List() {
                       colSpan={HEALTH_FORM_2_COLUMNS.length + 1}
                       className="px-6 py-10 text-center font-semibold text-slate-500"
                     >
-                      Chưa có record HealthForm2 nào.
+                      {filterRecordsByExamInfo
+                        ? 'Chưa có record HealthForm2 nào theo địa điểm/ngày khám đã chọn.'
+                        : 'Chưa có record HealthForm2 nào.'}
                     </td>
                   </tr>
                 )}
@@ -414,7 +367,8 @@ export default function HealthForm2List() {
           </div>
           <div className="flex flex-col gap-3 border-t border-slate-200 px-4 py-3 text-sm text-slate-600 sm:flex-row sm:items-center sm:justify-between">
             <span>
-              Hiển thị {startRecord}-{endRecord} / {records.length} record
+              Hiển thị {startRecord}-{endRecord} / {displayedRecords.length}{' '}
+              record
             </span>
             <div className="flex items-center gap-3">
               <Button

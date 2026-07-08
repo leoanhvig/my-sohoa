@@ -23,7 +23,7 @@ export function ToastProvider({ children }: IToastProviderProps): JSX.Element {
   function showTypedToast(
     type: EToastTypes,
     message: string = '',
-    autoClose = 5000,
+    autoClose = 1000,
     hideProgressBar = false,
     closeOnClick = true,
     pauseOnHover = true,
@@ -43,7 +43,7 @@ export function ToastProvider({ children }: IToastProviderProps): JSX.Element {
 
   function showToast(
     message: string = '',
-    autoClose = 5000,
+    autoClose = 1000,
     hideProgressBar = false,
     closeOnClick = true,
     pauseOnHover = true,
@@ -64,7 +64,7 @@ export function ToastProvider({ children }: IToastProviderProps): JSX.Element {
   function showError(message: string, code?: string) {
     toast.error(!!code ? `${code} - ${message}` : message, {
       position: 'bottom-right',
-      autoClose: 5000,
+      autoClose: 1000,
       hideProgressBar: false,
       closeOnClick: true,
       pauseOnHover: true,
@@ -82,7 +82,7 @@ export function ToastProvider({ children }: IToastProviderProps): JSX.Element {
     <ToastContext.Provider value={value}>
       <ToastContainer
         position="bottom-right"
-        autoClose={5000}
+        autoClose={1000}
         hideProgressBar={false}
         newestOnTop={false}
         closeOnClick

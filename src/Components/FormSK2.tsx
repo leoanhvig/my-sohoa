@@ -1,6 +1,7 @@
 import {
   addHealthFormRecord,
   getHealthFormRecordById,
+  HealthFormRecord,
   updateHealthFormRecord,
 } from '@/apis/healthForm2'
 import { Button } from '@/Components/ui/button'
@@ -215,14 +216,24 @@ function FieldInput({
   )
 }
 
-export default function FormSK2() {
+type FormSK2Props = {
+  updateRecordOverride?: HealthFormRecord | null
+  onUpdateSuccess?: () => void
+}
+
+export default function FormSK2({
+  updateRecordOverride = null,
+  onUpdateSuccess,
+}: FormSK2Props = {}) {
   const navigate = useNavigate()
   const { recordId } = useParams()
   const authUser = useUserStore((state) => state.authUser)
   const queryClient = useQueryClient()
   const { showError, showTypedToast } = useToast()
   const [isSaving, setIsSaving] = useState(false)
-  const isUpdateMode = Boolean(recordId)
+  const overrideRecordId = updateRecordOverride?.uid || ''
+  const activeRecordId = overrideRecordId || recordId || ''
+  const isUpdateMode = Boolean(activeRecordId)
   const {
     data: updateRecord,
     isLoading: isLoadingUpdateRecord,
@@ -230,9 +241,10 @@ export default function FormSK2() {
   } = useQuery({
     queryKey: ['health-form-2', 'record', recordId],
     queryFn: () => getHealthFormRecordById(recordId || ''),
-    enabled: isUpdateMode,
+    enabled: Boolean(recordId) && !overrideRecordId,
     staleTime: 3 * 60 * 1000,
   })
+  const activeUpdateRecord = updateRecordOverride || updateRecord
   const {
     handleSubmit,
     register,
@@ -246,10 +258,10 @@ export default function FormSK2() {
   })
 
   useEffect(() => {
-    if (updateRecord) {
-      reset(getFormValuesFromRecord(updateRecord))
+    if (activeUpdateRecord) {
+      reset(getFormValuesFromRecord(activeUpdateRecord))
     }
-  }, [reset, updateRecord])
+  }, [activeUpdateRecord, reset])
 
   async function onSubmit(values: FormSK2Values) {
     if (!authUser?.uid) {
@@ -278,14 +290,18 @@ export default function FormSK2() {
         { gender: 'Nữ' }
       )
 
-      if (isUpdateMode && recordId) {
-        await updateHealthFormRecord(recordId, {
+      if (isUpdateMode && activeRecordId) {
+        await updateHealthFormRecord(activeRecordId, {
           ...savedValues,
-          creator: updateRecord?.creator || authUser.uid,
+          creator: activeUpdateRecord?.creator || authUser.uid,
         })
         await queryClient.invalidateQueries({ queryKey: ['health-form-2'] })
         showTypedToast(EToastTypes.SUCCESS, 'Đã cập nhật thông tin SK2')
-        navigate('/list-healthform2')
+        if (overrideRecordId) {
+          onUpdateSuccess?.()
+        } else {
+          navigate('/list-healthform2')
+        }
       } else {
         await addHealthFormRecord({
           ...savedValues,
@@ -319,15 +335,6 @@ export default function FormSK2() {
         className="mx-auto max-w-7xl space-y-6"
       >
         <section className="bg-white p-6 shadow-sm">
-          {isUpdateMode ? (
-            <div className="mb-6 rounded-lg border border-indigo-100 bg-indigo-50 px-4 py-3 text-sm font-semibold text-indigo-700">
-              {isLoadingUpdateRecord
-                ? 'Đang tải dữ liệu cần cập nhật...'
-                : updateRecordError || !updateRecord
-                ? 'Không tìm thấy dữ liệu cần cập nhật.'
-                : 'Cập nhật thông tin SK2'}
-            </div>
-          ) : null}
           {formSK2Fields.length > 0 ? (
             <div className="grid gap-5 md:grid-cols-2">
               {formSK2Fields.map((field) => (
@@ -367,16 +374,16 @@ export default function FormSK2() {
           )}
         </section>
 
-        <div className="flex justify-end gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+        <div className="flex justify-end gap-3 rounded-xl px-4 py-2">
           <Button
             type="submit"
             disabled={
               isSaving ||
               formSK2Fields.length === 0 ||
               isLoadingUpdateRecord ||
-              (isUpdateMode && !updateRecord)
+              (isUpdateMode && !activeUpdateRecord)
             }
-            className="h-11 rounded-lg bg-indigo-600 px-8 text-base font-bold text-white shadow-lg shadow-indigo-200 transition hover:bg-indigo-700 hover:shadow-indigo-300 disabled:cursor-not-allowed disabled:opacity-60"
+            className="w-full h-11 rounded-lg bg-indigo-600 px-8 text-base font-bold text-white shadow-lg shadow-indigo-200 transition hover:bg-indigo-700 hover:shadow-indigo-300 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {isSaving
               ? isUpdateMode
