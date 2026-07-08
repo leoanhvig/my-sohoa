@@ -9,7 +9,6 @@ import {
 import { getFileRecordsByIds } from '@/apis/file'
 import { Button } from '@/Components/ui/button'
 import { EToastTypes, useToast } from '@/contexts/ToastContext'
-import { DocumentDetailHeader } from '@/features/document-detail/components/DocumentDetailHeader'
 import { DocumentPreviewPane } from '@/features/document-detail/components/DocumentPreviewPane'
 import { DocumentRecordPanel } from '@/features/document-detail/components/DocumentRecordPanel'
 import type { DocumentRecordFormValues } from '@/features/document-detail/types'
@@ -269,6 +268,14 @@ export default function DocumentDetail() {
   }
 
   async function handleDelete(documentToDelete: DocumentRecord) {
+    if (!fileRecord?.is_completed) {
+      showTypedToast(
+        EToastTypes.ERROR,
+        'Chỉ được xóa record khi file đã hoàn thành.'
+      )
+      return
+    }
+
     const confirmed = window.confirm(
       'Bạn có chắc muốn xóa record document này không?'
     )
@@ -280,6 +287,7 @@ export default function DocumentDetail() {
       await deleteDocumentRecord(documentToDelete.uid)
 
       if (fileRecord) {
+        const nextTotalPages = Math.max((fileRecord.number_of_file || 0) - 1, 0)
         const nextDonePages = Math.max(
           (fileRecord.number_of_file_done || 0) - 1,
           0
@@ -287,10 +295,9 @@ export default function DocumentDetail() {
 
         await updateFileRecord({
           uid: fileRecord.uid,
+          number_of_file: nextTotalPages,
           number_of_file_done: nextDonePages,
-          is_completed:
-            (fileRecord.number_of_file || 0) > 0 &&
-            nextDonePages >= (fileRecord.number_of_file || 0),
+          is_completed: nextTotalPages > 0 && nextDonePages >= nextTotalPages,
         })
       }
 
@@ -354,11 +361,11 @@ export default function DocumentDetail() {
 
   return (
     <main className="flex h-screen flex-col overflow-hidden bg-slate-100 text-slate-900">
-      <DocumentDetailHeader
+      {/* <DocumentDetailHeader
         documentRecord={documentRecord}
         fileRecord={fileRecord}
         onBack={() => navigate('/')}
-      />
+      /> */}
 
       <div className="grid min-h-0 flex-1 grid-cols-1 md:grid-cols-[minmax(0,2fr)_minmax(380px,1fr)]">
         <div className="relative min-h-0">
@@ -401,6 +408,7 @@ export default function DocumentDetail() {
             initialValues={formInitialValues}
             editingDocument={editingDocument}
             updateInitialValues={updateInitialValues}
+            fileRecord={fileRecord}
             documents={documentRecords}
             onApprove={handleApprove}
             onUpdate={handleUpdate}
@@ -408,6 +416,7 @@ export default function DocumentDetail() {
             onDelete={handleDelete}
             onCancelUpdate={() => setEditingDocument(null)}
             isSaving={isUpdatingFileRecord || isSavingDocument}
+            canDeleteDocuments={Boolean(fileRecord?.is_completed)}
             deletingDocumentUid={deletingDocumentUid}
           />
         )}

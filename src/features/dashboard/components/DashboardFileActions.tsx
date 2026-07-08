@@ -5,6 +5,7 @@ import { Eye, FilePenLine, Loader2 } from 'lucide-react'
 interface DashboardFileActionsProps {
   file: DashboardFile
   isClaiming: boolean
+  hideClaimButton: boolean
   onClaimFile: (file: DashboardFile) => void
   onViewFile: (fileUid: string) => void
 }
@@ -12,10 +13,15 @@ interface DashboardFileActionsProps {
 export function DashboardFileActions({
   file,
   isClaiming,
+  hideClaimButton,
   onClaimFile,
   onViewFile,
 }: DashboardFileActionsProps) {
   if (file.isUnassigned) {
+    if (hideClaimButton) {
+      return null
+    }
+
     return (
       <Button
         type="button"

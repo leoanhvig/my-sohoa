@@ -7,7 +7,7 @@
   "scripts": {
     "dev": "concurrently \"vite\" \"yarn dev:api\"",
     "dev:api": "ts-node-dev --project server/tsconfig.json --respawn --transpile-only server/src/index.ts",
-    "dev:all": "yarn dev",
+    "dev:all": "vite",
     "build:api": "tsc --project server/tsconfig.json",
     "start:api": "node server/dist/index.js",
     "build": "tsc && vite build",

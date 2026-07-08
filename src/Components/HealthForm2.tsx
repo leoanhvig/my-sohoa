@@ -12,6 +12,7 @@ export default function HealthForm2() {
   const [activeTab, setActiveTab] = useState<HealthForm2Tab>('form')
   const [selectedUpdateRecord, setSelectedUpdateRecord] =
     useState<HealthFormRecord | null>(null)
+  const [recordsRefreshVersion, setRecordsRefreshVersion] = useState(0)
   const uploadInputRef = useRef<HTMLInputElement | null>(null)
 
   useEffect(() => {
@@ -46,8 +47,12 @@ export default function HealthForm2() {
     setActiveTab('form')
   }
 
+  function refreshRecords() {
+    setRecordsRefreshVersion((version) => version + 1)
+  }
+
   return (
-    <main className="grid h-screen overflow-hidden bg-slate-100 text-slate-900 md:grid-cols-[minmax(0,1.3fr)_minmax(420px,1fr)]">
+    <main className="grid h-screen overflow-hidden bg-slate-100 text-slate-900 md:grid-cols-[2fr_1fr]">
       <section className="relative h-screen min-h-0 border-r border-slate-300 bg-slate-600">
         <input
           ref={uploadInputRef}
@@ -118,12 +123,17 @@ export default function HealthForm2() {
           {activeTab === 'form' ? (
             <FormSK2
               updateRecordOverride={selectedUpdateRecord}
-              onUpdateSuccess={() => setSelectedUpdateRecord(null)}
+              onCreateSuccess={refreshRecords}
+              onUpdateSuccess={() => {
+                setSelectedUpdateRecord(null)
+                refreshRecords()
+              }}
             />
           ) : (
             <HealthForm2List
               embedded
               filterRecordsByExamInfo
+              refreshVersion={recordsRefreshVersion}
               onSelectRecordForUpdate={handleSelectRecordForUpdate}
             />
           )}

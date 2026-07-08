@@ -5,6 +5,7 @@ import {
   FileText,
   Loader2,
   Search,
+  Trash2,
   UploadCloud,
 } from 'lucide-react'
 import { useMemo, useState } from 'react'
@@ -13,6 +14,7 @@ import { getDocumentsByUidFile, getDocumentsCount } from '../apis/document'
 import { FileRecord, updateFileRecordInfo } from '../apis/file'
 import { getAllUsers, type UserRecord } from '../apis/user'
 import { useAllFiles } from '../hooks/useAllFiles'
+import { useDeleteFileRecord } from '../hooks/useDeleteFileRecord'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
 
@@ -37,12 +39,53 @@ function getSafeExcelFileName(fileName: string): string {
   return (fileName || 'documents').replace(/[\\/:*?"<>|]/g, '-').trim()
 }
 
+function isCompletedFile(file: FileRecord): boolean {
+  const total = file.number_of_file || 0
+  const done = file.number_of_file_done || 0
+
+  return Boolean(file.is_completed) || (total > 0 && done >= total)
+}
+
+function getUpdatedAtTime(file: FileRecord): number {
+  const updatedAt = file.updated_at as unknown
+
+  if (updatedAt && typeof updatedAt === 'object' && 'toMillis' in updatedAt) {
+    return (updatedAt as { toMillis: () => number }).toMillis()
+  }
+
+  if (updatedAt instanceof Date) {
+    return updatedAt.getTime()
+  }
+
+  if (typeof updatedAt === 'string' || typeof updatedAt === 'number') {
+    const parsedTime = new Date(updatedAt).getTime()
+
+    return Number.isNaN(parsedTime) ? 0 : parsedTime
+  }
+
+  return 0
+}
+
+function sortCompletedFiles(files: FileRecord[]): FileRecord[] {
+  return [...files].sort((firstFile, secondFile) => {
+    if (Boolean(firstFile.isExported) !== Boolean(secondFile.isExported)) {
+      return firstFile.isExported ? 1 : -1
+    }
+
+    return getUpdatedAtTime(secondFile) - getUpdatedAtTime(firstFile)
+  })
+}
+
 export default function UploadedFiles() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const [searchText, setSearchText] = useState('')
+  const [activeTab, setActiveTab] = useState<'in-progress' | 'completed'>(
+    'in-progress'
+  )
   const [exportingFileUid, setExportingFileUid] = useState('')
   const { data: files = [], isLoading, error } = useAllFiles()
+  const { deleteFileRecord, deletingFileUid } = useDeleteFileRecord()
   const { data: totalDocumentRecords = 0, isLoading: isLoadingDocumentsCount } =
     useQuery<number>({
       queryKey: ['documents', 'total-count'],
@@ -65,14 +108,24 @@ export default function UploadedFiles() {
     () => allFiles.filter(isLocalUploadedFile),
     [allFiles]
   )
+  const inProgressFiles = useMemo(
+    () => localFiles.filter((file) => !isCompletedFile(file)),
+    [localFiles]
+  )
+  const completedFiles = useMemo(
+    () => sortCompletedFiles(localFiles.filter(isCompletedFile)),
+    [localFiles]
+  )
   const filteredFiles = useMemo(() => {
     const keyword = searchText.trim().toLowerCase()
+    const filesByTab =
+      activeTab === 'completed' ? completedFiles : inProgressFiles
 
     if (!keyword) {
-      return localFiles
+      return filesByTab
     }
 
-    return localFiles.filter(
+    return filesByTab.filter(
       (file) =>
         file.file_name.toLowerCase().includes(keyword) ||
         file.uid.toLowerCase().includes(keyword) ||
@@ -80,13 +133,14 @@ export default function UploadedFiles() {
           .toLowerCase()
           .includes(keyword)
     )
-  }, [localFiles, searchText, userNameByUid])
+  }, [activeTab, completedFiles, inProgressFiles, searchText, userNameByUid])
 
   async function handleExportFile(file: FileRecord) {
     try {
-      setExportingFileUid(file.uid)
+      const uid = file.uid
+      setExportingFileUid(uid)
       const [documents, XLSX] = await Promise.all([
-        getDocumentsByUidFile(file.uid),
+        getDocumentsByUidFile(uid),
         import('xlsx'),
       ])
       const worksheet = XLSX.utils.aoa_to_sheet([
@@ -110,7 +164,7 @@ export default function UploadedFiles() {
       XLSX.utils.book_append_sheet(workbook, worksheet, 'Documents')
       XLSX.writeFile(workbook, `${getSafeExcelFileName(file.file_name)}.xlsx`)
       await updateFileRecordInfo({
-        uid: file.uid,
+        uid: uid,
         isExported: true,
       })
       await queryClient.invalidateQueries({ queryKey: ['files', 'all'] })
@@ -119,6 +173,18 @@ export default function UploadedFiles() {
     } finally {
       setExportingFileUid('')
     }
+  }
+
+  async function handleDeleteFile(file: FileRecord) {
+    const confirmed = window.confirm(
+      `Bạn có chắc muốn xóa file "${file.file_name}" không?`
+    )
+
+    if (!confirmed) {
+      return
+    }
+
+    await deleteFileRecord(file.uid)
   }
 
   return (
@@ -138,10 +204,10 @@ export default function UploadedFiles() {
 
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
               <div className="rounded-full bg-indigo-50 px-3 py-1 text-sm font-bold text-indigo-700">
-                Tổng: {localFiles.length} bộ file
+                Tổng: {localFiles.length} file
               </div>
               <div className="rounded-full bg-emerald-50 px-3 py-1 text-sm font-bold text-emerald-700">
-                Tổng record documents:{' '}
+                Tổng documents:{' '}
                 {isLoadingDocumentsCount ? 'Đang tải...' : totalDocumentRecords}
               </div>
               <Button
@@ -168,6 +234,31 @@ export default function UploadedFiles() {
                 className="pl-9"
               />
             </div>
+          </div>
+
+          <div className="mt-6 flex flex-wrap gap-2 border-b border-slate-200">
+            <button
+              type="button"
+              className={`-mb-px rounded-t-lg border px-4 py-2 text-sm font-bold transition ${
+                activeTab === 'in-progress'
+                  ? 'border-slate-200 border-b-white bg-white text-indigo-700'
+                  : 'border-transparent text-slate-500 hover:bg-slate-50 hover:text-slate-700'
+              }`}
+              onClick={() => setActiveTab('in-progress')}
+            >
+              Đang làm ({inProgressFiles.length})
+            </button>
+            <button
+              type="button"
+              className={`-mb-px rounded-t-lg border px-4 py-2 text-sm font-bold transition ${
+                activeTab === 'completed'
+                  ? 'border-slate-200 border-b-white bg-white text-indigo-700'
+                  : 'border-transparent text-slate-500 hover:bg-slate-50 hover:text-slate-700'
+              }`}
+              onClick={() => setActiveTab('completed')}
+            >
+              Đã hoàn thành ({completedFiles.length})
+            </button>
           </div>
         </section>
 
@@ -196,9 +287,11 @@ export default function UploadedFiles() {
                   <th className="px-6 py-3 text-left font-bold text-slate-600">
                     Người nhập
                   </th>
-                  <th className="px-6 py-3 text-left font-bold text-slate-600">
-                    Đã export
-                  </th>
+                  {activeTab === 'completed' && (
+                    <th className="px-6 py-3 text-left font-bold text-slate-600">
+                      Đã export
+                    </th>
+                  )}
                   <th className="px-6 py-3 text-right font-bold text-slate-600">
                     Hành động
                   </th>
@@ -207,7 +300,10 @@ export default function UploadedFiles() {
               <tbody className="divide-y divide-slate-100 bg-white">
                 {isLoading ? (
                   <tr>
-                    <td colSpan={6} className="px-6 py-10 text-center">
+                    <td
+                      colSpan={activeTab === 'completed' ? 6 : 5}
+                      className="px-6 py-10 text-center"
+                    >
                       <span className="inline-flex items-center gap-2 font-semibold text-slate-500">
                         <Loader2 className="h-4 w-4 animate-spin" /> Đang tải...
                       </span>
@@ -259,35 +355,58 @@ export default function UploadedFiles() {
                           {userNameByUid.get(file.enteredByUserId) ||
                             'Chưa có người nhập'}
                         </td>
-                        <td className="px-6 py-4">
-                          {file.isExported ? (
-                            <span className="inline-flex rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700 ring-1 ring-inset ring-emerald-200">
-                              Exported
-                            </span>
-                          ) : null}
-                        </td>
+                        {activeTab === 'completed' && (
+                          <td className="px-6 py-4">
+                            {file.isExported ? (
+                              <span className="inline-flex rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700 ring-1 ring-inset ring-emerald-200">
+                                Exported
+                              </span>
+                            ) : null}
+                          </td>
+                        )}
                         <td className="space-x-2 px-6 py-4 text-right">
+                          {activeTab === 'in-progress' && (
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              className="text-red-600 hover:bg-red-50 hover:text-red-700"
+                              disabled={deletingFileUid === file.uid}
+                              aria-label={`Xóa file ${file.file_name}`}
+                              title={`Xóa file ${file.file_name}`}
+                              onClick={() => handleDeleteFile(file)}
+                            >
+                              {deletingFileUid === file.uid ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <Trash2 className="h-4 w-4" />
+                              )}
+                            </Button>
+                          )}
                           <Button
                             type="button"
                             size="sm"
                             className="bg-emerald-600 text-white hover:bg-emerald-700"
                             disabled={exportingFileUid === file.uid}
+                            aria-label={`Export file ${file.file_name}`}
+                            title={`Export file ${file.file_name}`}
                             onClick={() => handleExportFile(file)}
                           >
                             {exportingFileUid === file.uid ? (
-                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              <Loader2 className="h-4 w-4 animate-spin" />
                             ) : (
-                              <Download className="mr-2 h-4 w-4" />
+                              <Download className="h-4 w-4" />
                             )}
-                            Export file
                           </Button>
                           <Button
                             type="button"
                             size="sm"
                             variant="outline"
+                            aria-label={`Xem chi tiết file ${file.file_name}`}
+                            title={`Xem chi tiết file ${file.file_name}`}
                             onClick={() => navigate(`/file/${file.uid}`)}
                           >
-                            <Eye className="mr-2 h-4 w-4" /> Xem chi tiết
+                            <Eye className="h-4 w-4" />
                           </Button>
                         </td>
                       </tr>
@@ -296,10 +415,12 @@ export default function UploadedFiles() {
                 ) : (
                   <tr>
                     <td
-                      colSpan={6}
+                      colSpan={activeTab === 'completed' ? 6 : 5}
                       className="px-6 py-10 text-center text-sm font-semibold text-slate-500"
                     >
-                      Chưa có file PDF local nào được upload.
+                      {activeTab === 'completed'
+                        ? 'Chưa có file PDF local nào đã hoàn thành.'
+                        : 'Chưa có file PDF local nào đang làm.'}
                     </td>
                   </tr>
                 )}

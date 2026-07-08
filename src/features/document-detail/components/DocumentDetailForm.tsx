@@ -13,6 +13,13 @@ type DocumentDetailFormProps = {
   onCancel?: () => void
 }
 
+function normalizeTrichYeu(value: string): string {
+  return value.replace(
+    /(^|\s)(về việc|v\/v|v\.v|vv)\s*[:：,]?\s*/giu,
+    '$1về việc '
+  )
+}
+
 export function DocumentDetailForm({
   values,
   onChange,
@@ -117,19 +124,19 @@ export function DocumentDetailForm({
               onChange={(value) => updateField('soTo', value)}
             />
           </div>
-          <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
+          <div className="grid gap-3 sm:grid-cols-2 sm:items-end">
             <EditableField
               label="Số, ký hiệu văn bản"
               value={values.soKyHieu}
               onChange={(value) => updateField('soKyHieu', value)}
             />
+            <EditableField
+              label="Ngày, tháng, năm tài liệu"
+              value={values.ngayThang}
+              placeholder="dd/mm/yyyy, mm/yyyy hoặc yyyy"
+              onChange={(value) => updateField('ngayThang', value)}
+            />
           </div>
-          <EditableField
-            label="Ngày, tháng, năm tài liệu"
-            value={values.ngayThang}
-            placeholder="dd/mm/yyyy, mm/yyyy hoặc yyyy"
-            onChange={(value) => updateField('ngayThang', value)}
-          />
           <EditableTextarea
             label="Trích yếu nội dung"
             value={values.trichYeu}
@@ -186,7 +193,7 @@ function EditableField({
         placeholder={placeholder}
         required={required}
         onChange={(event) => onChange(event.target.value)}
-        className="mt-1.5 h-10 w-full rounded-md border border-blue-500 bg-white px-3 text-sm text-slate-900 outline-none transition focus:border-blue-700 focus:ring-2 focus:ring-blue-200"
+        className="mt-1.5 h-10 w-full rounded-md border border-blue-500 bg-white px-3 text-base text-slate-900 outline-none transition focus:border-blue-700 focus:ring-2 focus:ring-blue-200"
       />
     </div>
   )
@@ -207,13 +214,15 @@ function EditableTextarea({
     <div>
       <Label label={label} required={required} />
       <textarea
-        rows={4}
+        rows={8}
         value={value}
         required={required}
         onChange={(event) =>
-          onChange(event.target.value.replace(/[\r\n]+/g, ' '))
+          onChange(
+            normalizeTrichYeu(event.target.value.replace(/[\r\n]+/g, ' '))
+          )
         }
-        className="mt-1.5 w-full rounded-md border border-blue-500 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-blue-700 focus:ring-2 focus:ring-blue-200"
+        className="mt-1.5 w-full rounded-md border border-blue-500 bg-white px-3 py-2 text-base text-slate-900 outline-none transition focus:border-blue-700 focus:ring-2 focus:ring-blue-200"
       />
     </div>
   )

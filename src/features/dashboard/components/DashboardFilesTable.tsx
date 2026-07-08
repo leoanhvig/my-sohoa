@@ -7,7 +7,7 @@ import {
   useReactTable,
 } from '@tanstack/react-table'
 import { Clock3, Loader2 } from 'lucide-react'
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { DashboardFileActions } from './DashboardFileActions'
 import { DashboardFileStatus } from './DashboardFileStatus'
 
@@ -22,6 +22,43 @@ interface DashboardFilesTableProps {
   onViewFile: (fileUid: string) => void
 }
 
+function getUpdatedAtTime(file: DashboardFile): number {
+  const updatedAt = file.updated_at as unknown
+
+  if (updatedAt && typeof updatedAt === 'object' && 'toMillis' in updatedAt) {
+    return (updatedAt as { toMillis: () => number }).toMillis()
+  }
+
+  if (updatedAt instanceof Date) {
+    return updatedAt.getTime()
+  }
+
+  if (typeof updatedAt === 'string' || typeof updatedAt === 'number') {
+    const parsedTime = new Date(updatedAt).getTime()
+
+    return Number.isNaN(parsedTime) ? 0 : parsedTime
+  }
+
+  return 0
+}
+
+function sortInProgressFiles(files: DashboardFile[]): DashboardFile[] {
+  return [...files].sort((firstFile, secondFile) => {
+    if (firstFile.isUnassigned !== secondFile.isUnassigned) {
+      return firstFile.isUnassigned ? 1 : -1
+    }
+
+    return getUpdatedAtTime(secondFile) - getUpdatedAtTime(firstFile)
+  })
+}
+
+function sortCompletedFiles(files: DashboardFile[]): DashboardFile[] {
+  return [...files].sort(
+    (firstFile, secondFile) =>
+      getUpdatedAtTime(secondFile) - getUpdatedAtTime(firstFile)
+  )
+}
+
 export function DashboardFilesTable({
   files,
   loading,
@@ -32,6 +69,29 @@ export function DashboardFilesTable({
   onClaimFile,
   onViewFile,
 }: DashboardFilesTableProps) {
+  const [activeTab, setActiveTab] = useState<'in-progress' | 'completed'>(
+    'in-progress'
+  )
+  const inProgressFiles = useMemo(
+    () => sortInProgressFiles(files.filter((file) => !file.is_completed)),
+    [files]
+  )
+  const completedFiles = useMemo(
+    () => sortCompletedFiles(files.filter((file) => file.is_completed)),
+    [files]
+  )
+  const hasUncompletedClaimedFile = useMemo(
+    () =>
+      files.some(
+        (file) =>
+          !file.is_completed &&
+          (file.isClaimedByCurrentUser || !file.isUnassigned)
+      ),
+    [files]
+  )
+  const tableFiles =
+    activeTab === 'completed' ? completedFiles : inProgressFiles
+
   const columns = useMemo<ColumnDef<DashboardFile>[]>(
     () => [
       {
@@ -73,17 +133,18 @@ export function DashboardFilesTable({
           <DashboardFileActions
             file={row.original}
             isClaiming={claimingFileUid === row.original.uid}
+            hideClaimButton={hasUncompletedClaimedFile}
             onClaimFile={onClaimFile}
             onViewFile={onViewFile}
           />
         ),
       },
     ],
-    [claimingFileUid, onClaimFile, onViewFile]
+    [claimingFileUid, hasUncompletedClaimedFile, onClaimFile, onViewFile]
   )
 
   const table = useReactTable({
-    data: files,
+    data: tableFiles,
     columns,
     state: {
       globalFilter,
@@ -102,6 +163,31 @@ export function DashboardFilesTable({
         <span className="w-fit rounded-full bg-slate-600 px-3 py-1 text-xs font-bold text-white">
           Tổng: {table.getFilteredRowModel().rows.length} file
         </span>
+      </div>
+
+      <div className="flex flex-wrap gap-2 border-b border-slate-200 px-6 pt-4">
+        <button
+          type="button"
+          className={`-mb-px rounded-t-lg border px-4 py-2 text-sm font-bold transition ${
+            activeTab === 'in-progress'
+              ? 'border-slate-200 border-b-white bg-white text-indigo-700'
+              : 'border-transparent text-slate-500 hover:bg-slate-50 hover:text-slate-700'
+          }`}
+          onClick={() => setActiveTab('in-progress')}
+        >
+          Đang làm ({inProgressFiles.length})
+        </button>
+        <button
+          type="button"
+          className={`-mb-px rounded-t-lg border px-4 py-2 text-sm font-bold transition ${
+            activeTab === 'completed'
+              ? 'border-slate-200 border-b-white bg-white text-indigo-700'
+              : 'border-transparent text-slate-500 hover:bg-slate-50 hover:text-slate-700'
+          }`}
+          onClick={() => setActiveTab('completed')}
+        >
+          Đã hoàn thành ({completedFiles.length})
+        </button>
       </div>
 
       {error && (
@@ -170,7 +256,9 @@ export function DashboardFilesTable({
                   colSpan={columns.length}
                   className="px-6 py-10 text-center text-sm font-semibold text-slate-500"
                 >
-                  Không có hồ sơ phù hợp.
+                  {activeTab === 'completed'
+                    ? 'Không có hồ sơ đã hoàn thành phù hợp.'
+                    : 'Không có hồ sơ đang làm phù hợp.'}
                 </td>
               </tr>
             )}

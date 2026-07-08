@@ -47,6 +47,7 @@ const HEALTH_FORM_2_FIELD_NAME_BY_TITLE = HEALTH_FORM_2_COLUMNS.reduce<
 type HealthForm2ListProps = {
   embedded?: boolean
   filterRecordsByExamInfo?: boolean
+  refreshVersion?: number
   onSelectRecordForUpdate?: (record: HealthFormRecord) => void
 }
 
@@ -86,6 +87,7 @@ function useHealthForm2Records(creator?: string) {
 export default function HealthForm2List({
   embedded = false,
   filterRecordsByExamInfo = false,
+  refreshVersion = 0,
   onSelectRecordForUpdate,
 }: HealthForm2ListProps = {}) {
   const navigate = useNavigate()
@@ -105,6 +107,7 @@ export default function HealthForm2List({
     data: records = [],
     isLoading,
     error,
+    refetch,
   } = useHealthForm2Records(effectiveCreator)
   const displayedRecords = useMemo(() => {
     if (!filterRecordsByExamInfo) return records
@@ -139,6 +142,12 @@ export default function HealthForm2List({
   useEffect(() => {
     setCurrentPage(1)
   }, [effectiveCreator])
+
+  useEffect(() => {
+    if (refreshVersion > 0 && effectiveCreator) {
+      refetch()
+    }
+  }, [effectiveCreator, refetch, refreshVersion])
 
   useEffect(() => {
     setCurrentPage(1)

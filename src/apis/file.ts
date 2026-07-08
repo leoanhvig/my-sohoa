@@ -10,6 +10,7 @@ import {
   setDoc,
   updateDoc,
   where,
+  writeBatch,
 } from 'firebase/firestore'
 import { db } from '../firebase'
 
@@ -49,6 +50,7 @@ export interface UpdateFileRecordParams {
 }
 
 const FILE_COLLECTION = 'Files'
+const DOCUMENTS_COLLECTION = 'Documents'
 const RANDOM_CLAIM_CANDIDATE_LIMIT = 10
 
 export async function createFileRecord({
@@ -279,6 +281,21 @@ export async function updateFileRecordInfo({
     ...updatePayload,
     updated_at: serverTimestamp(),
   })
+}
+
+export async function deleteFileRecord(fileUid: string): Promise<void> {
+  const batch = writeBatch(db)
+  const fileRef = doc(db, FILE_COLLECTION, fileUid)
+  const documentsSnapshot = await getDocs(
+    query(collection(db, DOCUMENTS_COLLECTION), where('uid_file', '==', fileUid))
+  )
+
+  documentsSnapshot.docs.forEach((documentSnapshot) => {
+    batch.delete(documentSnapshot.ref)
+  })
+  batch.delete(fileRef)
+
+  await batch.commit()
 }
 
 export async function getFileRecordsByIds(

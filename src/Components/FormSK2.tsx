@@ -8,7 +8,7 @@ import { Button } from '@/Components/ui/button'
 import { EToastTypes, useToast } from '@/contexts/ToastContext'
 import { useUserStore } from '@/stores/userStore'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { useEffect, useState } from 'react'
+import { KeyboardEvent, useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { useNavigate, useParams } from 'react-router-dom'
 
@@ -118,6 +118,32 @@ function getFormValuesFromRecord(record: Record<string, unknown>) {
   }
 }
 
+function normalizeBirthDateForSave(value: string) {
+  const trimmedValue = value.trim()
+
+  if (/^\d{4}$/.test(trimmedValue)) {
+    return `01/01/${trimmedValue}`
+  }
+
+  const monthYearMatch = trimmedValue.match(/^(\d{1,2})\/(\d{4})$/)
+  if (monthYearMatch) {
+    return `01/${monthYearMatch[1].padStart(2, '0')}/${monthYearMatch[2]}`
+  }
+
+  if (/^\d{8}$/.test(trimmedValue)) {
+    return `${trimmedValue.slice(0, 2)}/${trimmedValue.slice(
+      2,
+      4
+    )}/${trimmedValue.slice(4)}`
+  }
+
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(trimmedValue)) {
+    return trimmedValue
+  }
+
+  return value
+}
+
 function FieldInput({
   field,
   register,
@@ -218,11 +244,13 @@ function FieldInput({
 
 type FormSK2Props = {
   updateRecordOverride?: HealthFormRecord | null
+  onCreateSuccess?: () => void
   onUpdateSuccess?: () => void
 }
 
 export default function FormSK2({
   updateRecordOverride = null,
+  onCreateSuccess,
   onUpdateSuccess,
 }: FormSK2Props = {}) {
   const navigate = useNavigate()
@@ -256,12 +284,23 @@ export default function FormSK2({
   } = useForm<FormSK2Values>({
     defaultValues: defaultFormSK2Values,
   })
+  const isSubmitDisabled =
+    isSaving ||
+    formSK2Fields.length === 0 ||
+    isLoadingUpdateRecord ||
+    (isUpdateMode && !activeUpdateRecord)
 
   useEffect(() => {
     if (activeUpdateRecord) {
       reset(getFormValuesFromRecord(activeUpdateRecord))
+      return
     }
-  }, [activeUpdateRecord, reset])
+
+    if (!recordId) {
+      reset(defaultFormSK2Values)
+      setFocus('patientCode')
+    }
+  }, [activeUpdateRecord, recordId, reset, setFocus])
 
   async function onSubmit(values: FormSK2Values) {
     if (!authUser?.uid) {
@@ -278,6 +317,8 @@ export default function FormSK2({
           const normalizedFieldValue =
             field.name === 'provinceCity' && !fieldValue.trim()
               ? 'TP. Hồ Chí Minh'
+              : field.name === 'birthDate'
+              ? normalizeBirthDateForSave(fieldValue)
               : fieldValue
 
           result[field.name] = ['fullName', 'healthInsuranceNumber'].includes(
@@ -309,6 +350,7 @@ export default function FormSK2({
         })
         await queryClient.invalidateQueries({ queryKey: ['health-form-2'] })
         showTypedToast(EToastTypes.SUCCESS, 'Đã lưu thông tin SK2')
+        onCreateSuccess?.()
         reset({
           ...defaultFormSK2Values,
           clinicLocation: values.clinicLocation,
@@ -328,10 +370,19 @@ export default function FormSK2({
     }
   }
 
+  function handleFormKeyDown(event: KeyboardEvent<HTMLFormElement>) {
+    if (event.key !== 'Enter' || event.nativeEvent.isComposing) return
+    if (isSubmitDisabled) return
+
+    event.preventDefault()
+    event.currentTarget.requestSubmit()
+  }
+
   return (
     <main className="min-h-screen bg-slate-50 text-slate-900">
       <form
         onSubmit={handleSubmit(onSubmit)}
+        onKeyDown={handleFormKeyDown}
         className="mx-auto max-w-7xl space-y-6"
       >
         <section className="bg-white p-6 shadow-sm">
@@ -377,12 +428,7 @@ export default function FormSK2({
         <div className="flex justify-end gap-3 rounded-xl px-4 py-2">
           <Button
             type="submit"
-            disabled={
-              isSaving ||
-              formSK2Fields.length === 0 ||
-              isLoadingUpdateRecord ||
-              (isUpdateMode && !activeUpdateRecord)
-            }
+            disabled={isSubmitDisabled}
             className="w-full h-11 rounded-lg bg-indigo-600 px-8 text-base font-bold text-white shadow-lg shadow-indigo-200 transition hover:bg-indigo-700 hover:shadow-indigo-300 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {isSaving

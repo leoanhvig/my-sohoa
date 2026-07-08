@@ -1,6 +1,9 @@
 import type { DocumentRecord } from '@/apis/document'
-import { Loader2, Trash2 } from 'lucide-react'
+import type { FileRecord } from '@/apis/file'
+import { Button } from '@/Components/ui/button'
+import { ArrowLeft, Loader2, Trash2 } from 'lucide-react'
 import { Fragment, useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import type { DocumentRecordFormValues } from '../types'
 import { DocumentRecordForm } from './DocumentRecordForm'
 
@@ -19,7 +22,9 @@ type DocumentRecordPanelProps = {
   onDelete: (documentRecord: DocumentRecord) => void | Promise<void>
   onCancelUpdate: () => void
   isSaving: boolean
+  canDeleteDocuments?: boolean
   deletingDocumentUid?: string | null
+  fileRecord: FileRecord | null
 }
 
 export function DocumentRecordPanel({
@@ -35,10 +40,13 @@ export function DocumentRecordPanel({
   onDelete,
   onCancelUpdate,
   isSaving,
+  canDeleteDocuments = false,
   deletingDocumentUid,
+  fileRecord,
 }: DocumentRecordPanelProps) {
   const [activeTab, setActiveTab] = useState<DocumentRecordPanelTab>('form')
   const isUpdateMode = Boolean(editingDocument)
+  const navigate = useNavigate()
 
   useEffect(() => {
     if (editingDocument) {
@@ -47,9 +55,26 @@ export function DocumentRecordPanel({
   }, [editingDocument])
 
   return (
-    <aside className="min-h-0 overflow-hidden bg-slate-50 p-4">
-      <div className="flex h-full min-h-0 flex-col gap-5">
-        <div className="grid shrink-0 grid-cols-2 rounded-lg border border-slate-200 bg-white p-1 shadow-sm ">
+    <aside className="min-h-0 overflow-hidden bg-slate-50 px-4">
+      <div className="flex h-full min-h-0 flex-col gap-2">
+        <div className="flex flex-row gap-3 pt-3">
+          <Button
+            type="button"
+            variant="outline"
+            className="h-8 w-fit shrink-0 border-slate-300 bg-white px-3 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+            onClick={() => navigate('/')}
+          >
+            <ArrowLeft className="mr-1.5 h-4 w-4" /> Về Dashboard
+          </Button>
+
+          <div className="flex min-w-0 items-center gap-2 text-sm font-bold text-slate-900">
+            <span className="truncate">
+              {fileRecord?.file_name || fileRecord?.uid || 'Đang tải hồ sơ...'}
+            </span>
+          </div>
+        </div>
+
+        <div className="grid shrink-0 grid-cols-2 rounded-lg border border-slate-200 bg-white shadow-sm ">
           <button
             type="button"
             className={
@@ -106,12 +131,18 @@ export function DocumentRecordPanel({
                       >
                         <div className="flex flex-col gap-1">
                           <p className="text-sm font-bold text-slate-900">
-                            {documents.length - index}.{' '}
-                            {`${documentRecord.so_ky_hieu}-${documentRecord.so_to}` ||
-                              'Chưa có số ký hiệu'}
+                            {documents.length - index}. Số tờ:{' '}
+                            {documentRecord.so_to || 'Chưa có'}
+                          </p>
+                          <p className="text-xs font-semibold text-slate-600">
+                            Ký hiệu: {documentRecord.so_ky_hieu || 'Chưa có'}
                           </p>
                           <p className="text-xs font-semibold text-slate-600">
                             Ngày tháng: {documentRecord.ngay_thang || 'Chưa có'}
+                          </p>
+                          <p className="text-xs font-semibold text-slate-600">
+                            Cơ quan:{' '}
+                            {documentRecord.co_quan_ban_hanh || 'Chưa có'}
                           </p>
                           <p className="text-xs text-slate-500">
                             Trích yếu: {documentRecord.trich_yeu || 'Chưa có'}
@@ -121,9 +152,17 @@ export function DocumentRecordPanel({
                       <button
                         type="button"
                         className="mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-red-200 text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
-                        title="Xóa record"
+                        title={
+                          canDeleteDocuments
+                            ? 'Xóa record'
+                            : 'Chỉ được xóa khi file đã hoàn thành'
+                        }
                         aria-label="Xóa record document"
-                        disabled={Boolean(deletingDocumentUid) || isSaving}
+                        disabled={
+                          !canDeleteDocuments ||
+                          Boolean(deletingDocumentUid) ||
+                          isSaving
+                        }
                         onClick={() => onDelete(documentRecord)}
                       >
                         {deletingDocumentUid === documentRecord.uid ? (
