@@ -15,6 +15,10 @@ export function getApiBaseUrl(): string {
   return import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000'
 }
 
+export function getPdfUploadApiBaseUrl(): string {
+  return import.meta.env.VITE_PDF_SERVER_URL || 'http://localhost:3000'
+}
+
 export function getLocalFileContentUrl(storagePath: string): string {
   return `${getApiBaseUrl()}/uploads/${encodeURIComponent(storagePath).replace(
     /%2F/g,
@@ -25,23 +29,32 @@ export function getLocalFileContentUrl(storagePath: string): string {
 export async function uploadPdfFiles({
   files,
 }: UploadPdfFilesParams): Promise<UploadedPdfFile[]> {
-  const apiBaseUrl = getApiBaseUrl()
-  const formData = new FormData()
+  const apiBaseUrl = getPdfUploadApiBaseUrl()
 
-  for (const file of files) {
-    formData.append('files', file)
-  }
+  return Promise.all(
+    files.map(async (file) => {
+      const formData = new FormData()
+      formData.append('file', file)
 
-  const response = await fetch(`${apiBaseUrl}/api/local-files/upload-pdfs`, {
-    method: 'POST',
-    body: formData,
-  })
+      const response = await fetch(`${apiBaseUrl}/api/upload`, {
+        method: 'POST',
+        body: formData,
+      })
 
-  const data = await response.json().catch(() => null)
+      const data = await response.json().catch(() => null)
 
-  if (!response.ok) {
-    throw new Error(data?.message || 'Không upload được file PDF.')
-  }
+      if (!response.ok || !data?.success) {
+        throw new Error(data?.message || `Không upload được file ${file.name}.`)
+      }
 
-  return data.files as UploadedPdfFile[]
+      return {
+        originalName: file.name,
+        fileName: data.filename,
+        storagePath: data.filename,
+        downloadUrl: data.url,
+        size: data.size,
+        mimeType: file.type || 'application/pdf',
+      }
+    })
+  )
 }

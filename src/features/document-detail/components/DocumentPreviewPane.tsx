@@ -30,6 +30,10 @@ function getPdfSourceUrl(fileRecord: FileRecord, previewUrl: string) {
     return ''
   }
 
+  if (fileRecord.download_url) {
+    return fileRecord.download_url
+  }
+
   if (fileRecord.storage_path) {
     return getLocalFileContentUrl(fileRecord.storage_path)
   }
