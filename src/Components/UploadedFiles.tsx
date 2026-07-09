@@ -39,6 +39,32 @@ function getSafeExcelFileName(fileName: string): string {
   return (fileName || 'documents').replace(/[\\/:*?"<>|]/g, '-').trim()
 }
 
+function formatExportDate(value: unknown): string {
+  if (value && typeof value === 'object' && 'toDate' in value) {
+    return (value as { toDate: () => Date }).toDate().toLocaleString('vi-VN')
+  }
+
+  if (value && typeof value === 'object' && 'toMillis' in value) {
+    return new Date(
+      (value as { toMillis: () => number }).toMillis()
+    ).toLocaleString('vi-VN')
+  }
+
+  if (value instanceof Date) {
+    return value.toLocaleString('vi-VN')
+  }
+
+  if (typeof value === 'string' || typeof value === 'number') {
+    const parsedDate = new Date(value)
+
+    return Number.isNaN(parsedDate.getTime())
+      ? String(value)
+      : parsedDate.toLocaleString('vi-VN')
+  }
+
+  return ''
+}
+
 function isCompletedFile(file: FileRecord): boolean {
   const total = file.number_of_file || 0
   const done = file.number_of_file_done || 0
@@ -84,6 +110,8 @@ export default function UploadedFiles() {
     'in-progress'
   )
   const [exportingFileUid, setExportingFileUid] = useState('')
+  const [isExportingFilesCollection, setIsExportingFilesCollection] =
+    useState(false)
   const { data: files = [], isLoading, error } = useAllFiles()
   const { deleteFileRecord, deletingFileUid } = useDeleteFileRecord()
   const { data: totalDocumentRecords = 0, isLoading: isLoadingDocumentsCount } =
@@ -175,6 +203,61 @@ export default function UploadedFiles() {
     }
   }
 
+  async function handleExportFilesCollection() {
+    try {
+      setIsExportingFilesCollection(true)
+      const XLSX = await import('xlsx')
+      const worksheet = XLSX.utils.aoa_to_sheet([
+        [
+          'ID',
+          'Tên file',
+          'Số PDF',
+          'Số PDF đã nhập',
+          'Tiến độ (%)',
+          'Trạng thái hoàn thành',
+          'Đã export',
+          'Người nhập',
+          'ID người nhập',
+          'Creator UID',
+          'Updated UID',
+          'Storage provider',
+          'Relative path',
+          'Storage path',
+          'Download URL',
+          'Ngày tạo',
+          'Ngày cập nhật',
+        ],
+        ...allFiles.map((file) => [
+          file.uid,
+          file.file_name || '',
+          file.number_of_file || 0,
+          file.number_of_file_done || 0,
+          getCompletedPercent(file),
+          isCompletedFile(file) ? 'Đã hoàn thành' : 'Đang làm',
+          file.isExported ? 'Đã export' : 'Chưa export',
+          userNameByUid.get(file.enteredByUserId) || '',
+          file.enteredByUserId || '',
+          file.creator_uid || '',
+          file.updated_uid || '',
+          file.storage_provider || '',
+          file.relative_path || '',
+          file.storage_path || '',
+          file.download_url || '',
+          formatExportDate(file.created_at),
+          formatExportDate(file.updated_at),
+        ]),
+      ])
+      const workbook = XLSX.utils.book_new()
+
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Files')
+      XLSX.writeFile(workbook, 'Files-collection.xlsx')
+    } catch (err) {
+      console.error('Không export được collection Files:', err)
+    } finally {
+      setIsExportingFilesCollection(false)
+    }
+  }
+
   async function handleDeleteFile(file: FileRecord) {
     const confirmed = window.confirm(
       `Bạn có chắc muốn xóa file "${file.file_name}" không?`
@@ -216,6 +299,19 @@ export default function UploadedFiles() {
                 onClick={() => navigate('/upload')}
               >
                 Upload thêm
+              </Button>
+              <Button
+                type="button"
+                className="bg-emerald-600 text-white hover:bg-emerald-700"
+                disabled={isExportingFilesCollection || allFiles.length === 0}
+                onClick={handleExportFilesCollection}
+              >
+                {isExportingFilesCollection ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Download className="mr-2 h-4 w-4" />
+                )}
+                Export Files
               </Button>
             </div>
           </div>

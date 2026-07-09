@@ -57,7 +57,7 @@ export function DocumentPreviewPane({
   const canRenderPdfViewer =
     Boolean(pdfSourceUrl) && (previewKind === 'pdf' || Boolean(localPreviewUrl))
   const pdfViewerUrl = pdfSourceUrl
-    ? `${pdfSourceUrl}#toolbar=1&navpanes=1&page=${previewPage}`
+    ? `${pdfSourceUrl}#toolbar=1&navpanes=0&page=${previewPage}&view=FitH&zoom=page-width`
     : ''
 
   return (
