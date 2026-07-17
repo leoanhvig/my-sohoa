@@ -6,7 +6,7 @@
   "homepage": "https://igorbayerl.github.io/chess-two",
   "scripts": {
     "dev": "concurrently \"vite\" \"yarn dev:api\"",
-    "dev:api": "ts-node-dev --project server/tsconfig.json --respawn --transpile-only server/src/index.ts",
+    "dev:api": "yarn --cwd pdf-server dev",
     "dev:all": "vite",
     "build:api": "tsc --project server/tsconfig.json",
     "start:api": "node server/dist/index.js",

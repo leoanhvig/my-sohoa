@@ -1,6 +1,14 @@
 import { getFileRecordsByIds, type FileRecord } from '@/apis/file'
+import { getAllUsers, type UserRecord } from '@/apis/user'
 import { Button } from '@/Components/ui/button'
 import { Input } from '@/Components/ui/input'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/Components/ui/select'
 import { DocumentPreviewPane } from '@/features/document-detail/components/DocumentPreviewPane'
 import { getPreviewUrl } from '@/features/document-detail/utils'
 import { useUpdateFileRecord } from '@/hooks/useUpdateFileRecord'
@@ -14,6 +22,7 @@ type EditableFileValues = {
   number_of_file: string
   number_of_file_done: string
   isExported: boolean
+  enteredByUserId: string
   creator_uid: string
   updated_uid: string
   storage_provider: 'firebase_storage'
@@ -25,6 +34,7 @@ function toEditableFileValues(fileRecord: FileRecord): EditableFileValues {
     number_of_file: String(fileRecord.number_of_file || 0),
     number_of_file_done: String(fileRecord.number_of_file_done || 0),
     isExported: Boolean(fileRecord.isExported),
+    enteredByUserId: fileRecord.enteredByUserId || '',
     creator_uid: fileRecord.creator_uid || '',
     updated_uid: fileRecord.updated_uid || '',
     storage_provider: fileRecord.storage_provider || 'firebase_storage',
@@ -62,6 +72,12 @@ export default function FileDetail() {
   const [editableFileValues, setEditableFileValues] =
     useState<EditableFileValues | null>(null)
   const { updateFileRecord, isUpdatingFileRecord } = useUpdateFileRecord()
+  const { data: users = [], isLoading: isLoadingUsers } = useQuery<
+    UserRecord[]
+  >({
+    queryKey: ['users', 'all'],
+    queryFn: getAllUsers,
+  })
 
   const {
     data: fileRecords = [],
@@ -96,6 +112,7 @@ export default function FileDetail() {
             number_of_file: '0',
             number_of_file_done: '0',
             isExported: false,
+            enteredByUserId: '',
             creator_uid: '',
             updated_uid: '',
             storage_provider: 'firebase_storage' as const,
@@ -119,6 +136,7 @@ export default function FileDetail() {
       number_of_file: Number(editableFileValues.number_of_file || 0),
       number_of_file_done: Number(editableFileValues.number_of_file_done || 0),
       isExported: editableFileValues.isExported,
+      enteredByUserId: editableFileValues.enteredByUserId,
       creator_uid: editableFileValues.creator_uid,
       updated_uid: editableFileValues.updated_uid,
       storage_provider: editableFileValues.storage_provider,
@@ -221,6 +239,37 @@ export default function FileDetail() {
                         />
                         Đã export
                       </label>
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-bold uppercase tracking-wide text-slate-500">
+                          Người nhập
+                        </label>
+                        <Select
+                          value={
+                            editableFileValues.enteredByUserId || 'unassigned'
+                          }
+                          onValueChange={(value) =>
+                            updateEditableFileValue(
+                              'enteredByUserId',
+                              value === 'unassigned' ? '' : value
+                            )
+                          }
+                          disabled={isLoadingUsers}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Chọn người nhập" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="unassigned">
+                              Chưa phân công
+                            </SelectItem>
+                            {users.map((user) => (
+                              <SelectItem key={user.uid} value={user.uid}>
+                                {user.user_name} ({user.email || user.uid})
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
                       <EditableField
                         label="Creator UID"
                         value={editableFileValues.creator_uid}

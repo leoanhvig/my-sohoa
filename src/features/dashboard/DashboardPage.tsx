@@ -16,6 +16,7 @@ export default function DashboardPage() {
   const userName = userRecord?.user_name ?? authUser?.email ?? 'người dùng'
   const [globalFilter, setGlobalFilter] = useState('')
   const [claimingFileUid, setClaimingFileUid] = useState('')
+  const [claimError, setClaimError] = useState('')
   const { files, loading, error, refetch } = useDashboardFiles(authUser?.uid)
 
   const handleViewFile = useCallback(
@@ -27,9 +28,10 @@ export default function DashboardPage() {
 
   const handleClaimFile = useCallback(
     async (file: DashboardFile) => {
-      if (!authUser?.uid) return
+      if (!authUser?.uid || claimingFileUid) return
 
       try {
+        setClaimError('')
         setClaimingFileUid(file.uid)
         await claimFileRecord({
           fileUid: file.uid,
@@ -39,12 +41,16 @@ export default function DashboardPage() {
         await queryClient.invalidateQueries({
           queryKey: ['files'],
         })
-        await handleViewFile(file.uid)
+      } catch (err) {
+        setClaimError(
+          err instanceof Error ? err.message : 'Không thể nhận file.'
+        )
+        await refetch()
       } finally {
         setClaimingFileUid('')
       }
     },
-    [authUser?.uid, handleViewFile, queryClient, refetch]
+    [authUser?.uid, claimingFileUid, queryClient, refetch]
   )
 
   return (
@@ -66,6 +72,7 @@ export default function DashboardPage() {
           globalFilter={globalFilter}
           onGlobalFilterChange={setGlobalFilter}
           claimingFileUid={claimingFileUid}
+          claimError={claimError}
           onClaimFile={handleClaimFile}
           onViewFile={handleViewFile}
         />

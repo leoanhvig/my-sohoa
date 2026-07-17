@@ -18,6 +18,7 @@ interface DashboardFilesTableProps {
   globalFilter: string
   onGlobalFilterChange: (value: string) => void
   claimingFileUid: string
+  claimError: string
   onClaimFile: (file: DashboardFile) => void
   onViewFile: (fileUid: string) => void
 }
@@ -66,9 +67,11 @@ export function DashboardFilesTable({
   globalFilter,
   onGlobalFilterChange,
   claimingFileUid,
+  claimError,
   onClaimFile,
   onViewFile,
 }: DashboardFilesTableProps) {
+  const MAX_ACTIVE_CLAIMS = 3
   const [activeTab, setActiveTab] = useState<'in-progress' | 'completed'>(
     'in-progress'
   )
@@ -80,13 +83,10 @@ export function DashboardFilesTable({
     () => sortCompletedFiles(files.filter((file) => file.is_completed)),
     [files]
   )
-  const hasUncompletedClaimedFile = useMemo(
+  const hasReachedActiveClaimLimit = useMemo(
     () =>
-      files.some(
-        (file) =>
-          !file.is_completed &&
-          (file.isClaimedByCurrentUser || !file.isUnassigned)
-      ),
+      files.filter((file) => !file.is_completed && file.isClaimedByCurrentUser)
+        .length >= MAX_ACTIVE_CLAIMS,
     [files]
   )
   const tableFiles =
@@ -133,14 +133,14 @@ export function DashboardFilesTable({
           <DashboardFileActions
             file={row.original}
             isClaiming={claimingFileUid === row.original.uid}
-            hideClaimButton={hasUncompletedClaimedFile}
+            hideClaimButton={hasReachedActiveClaimLimit}
             onClaimFile={onClaimFile}
             onViewFile={onViewFile}
           />
         ),
       },
     ],
-    [claimingFileUid, hasUncompletedClaimedFile, onClaimFile, onViewFile]
+    [claimingFileUid, hasReachedActiveClaimLimit, onClaimFile, onViewFile]
   )
 
   const table = useReactTable({
@@ -193,6 +193,12 @@ export function DashboardFilesTable({
       {error && (
         <div className="m-6 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
           {error}
+        </div>
+      )}
+
+      {claimError && (
+        <div className="m-6 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+          {claimError}
         </div>
       )}
 

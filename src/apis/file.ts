@@ -44,6 +44,7 @@ export interface UpdateFileRecordParams {
   number_of_file_done?: number
   is_completed?: boolean
   isExported?: boolean
+  enteredByUserId?: string
   creator_uid?: string
   updated_uid?: string
   storage_provider?: 'firebase_storage'
@@ -192,10 +193,24 @@ export async function claimFileRecord({
 }): Promise<void> {
   const fileRef = doc(db, FILE_COLLECTION, fileUid)
 
-  await updateDoc(fileRef, {
-    enteredByUserId: userUid,
-    updated_uid: userUid,
-    updated_at: serverTimestamp(),
+  await runTransaction(db, async (transaction) => {
+    const fileSnapshot = await transaction.get(fileRef)
+
+    if (!fileSnapshot.exists()) {
+      throw new Error('File không còn tồn tại.')
+    }
+
+    const file = fileSnapshot.data() as FileRecord
+
+    if (file.enteredByUserId) {
+      throw new Error('File này đã được người khác nhận.')
+    }
+
+    transaction.update(fileRef, {
+      enteredByUserId: userUid,
+      updated_uid: userUid,
+      updated_at: serverTimestamp(),
+    })
   })
 }
 
@@ -259,6 +274,7 @@ export async function updateFileRecordInfo({
   number_of_file_done,
   is_completed,
   isExported,
+  enteredByUserId,
   creator_uid,
   updated_uid,
   storage_provider,
@@ -271,6 +287,7 @@ export async function updateFileRecordInfo({
       number_of_file_done,
       is_completed,
       isExported,
+      enteredByUserId,
       creator_uid,
       updated_uid,
       storage_provider,
@@ -287,7 +304,10 @@ export async function deleteFileRecord(fileUid: string): Promise<void> {
   const batch = writeBatch(db)
   const fileRef = doc(db, FILE_COLLECTION, fileUid)
   const documentsSnapshot = await getDocs(
-    query(collection(db, DOCUMENTS_COLLECTION), where('uid_file', '==', fileUid))
+    query(
+      collection(db, DOCUMENTS_COLLECTION),
+      where('uid_file', '==', fileUid)
+    )
   )
 
   documentsSnapshot.docs.forEach((documentSnapshot) => {

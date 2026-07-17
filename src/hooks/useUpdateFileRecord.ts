@@ -14,6 +14,10 @@ export function useUpdateFileRecord() {
         queryKey: ['files', 'detail', fileRecord.uid],
       })
       queryClient.invalidateQueries({ queryKey: ['files', 'all'] })
+      queryClient.invalidateQueries({ queryKey: ['files', 'dashboard'] })
+      queryClient.invalidateQueries({
+        queryKey: ['files', 'uncompleted-count'],
+      })
       showTypedToast(EToastTypes.SUCCESS, 'Đã cập nhật thông tin File')
     },
     onError: (error) => {
