@@ -243,7 +243,7 @@ export default function UploadFile() {
                   />
                   <span>
                     <span className="block text-sm font-bold text-slate-900">
-                      Hồ tịch
+                      Hộ tịch
                     </span>
                     <span className="mt-1 block text-xs text-slate-500">
                       Lưu cùng cấu trúc dữ liệu vào collection FileHoTichs.

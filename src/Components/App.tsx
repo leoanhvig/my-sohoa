@@ -14,6 +14,9 @@ import { useUserStore } from '../stores/userStore'
 import Dashboard from './Dashboard'
 import DocumentDetail from './DocumentDetail'
 import FileDetail from './FileDetail'
+import FileHoTichDetail from './FileHoTichDetail'
+import FileHoTichs from './FileHoTichs'
+import HoTichDocumentDetail from './HoTichDocumentDetail'
 import Files from './Files'
 import HealthForm2 from './HealthForm2'
 import HealthForm2List from './HealthForm2List'
@@ -56,6 +59,15 @@ function App() {
               />
               <Route element={<Files />} path="/files" />
               <Route element={<FileDetail />} path="/file/:fileId" />
+              <Route element={<FileHoTichs />} path="/file-hotich" />
+              <Route
+                element={<HoTichDocumentDetail />}
+                path="/file-hotich/:fileId/documents"
+              />
+              <Route
+                element={<FileHoTichDetail />}
+                path="/file-hotich/:fileId"
+              />
               <Route
                 path="/health-form-2"
                 element={

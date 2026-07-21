@@ -1,24 +1,40 @@
-import { updateFileRecordInfo, type UpdateFileRecordParams } from '@/apis/file'
+import {
+  updateFileRecordInfo,
+  updateHoTichFileRecordInfo,
+  type UpdateFileRecordParams,
+} from '@/apis/file'
 import { EToastTypes, useToast } from '@/contexts/ToastContext'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 
-export function useUpdateFileRecord() {
+export function useUpdateFileRecord(
+  collection: 'files' | 'ho-tich' = 'files'
+) {
   const { showError, showTypedToast } = useToast()
   const queryClient = useQueryClient()
 
   const mutation = useMutation({
     mutationFn: (fileRecord: UpdateFileRecordParams) =>
-      updateFileRecordInfo(fileRecord),
+      collection === 'ho-tich'
+        ? updateHoTichFileRecordInfo(fileRecord)
+        : updateFileRecordInfo(fileRecord),
     onSuccess: (_, fileRecord) => {
+      const queryPrefix = collection === 'ho-tich' ? 'ho-tich-files' : 'files'
       queryClient.invalidateQueries({
-        queryKey: ['files', 'detail', fileRecord.uid],
+        queryKey: [queryPrefix, 'detail', fileRecord.uid],
       })
-      queryClient.invalidateQueries({ queryKey: ['files', 'all'] })
-      queryClient.invalidateQueries({ queryKey: ['files', 'dashboard'] })
-      queryClient.invalidateQueries({
-        queryKey: ['files', 'uncompleted-count'],
-      })
-      showTypedToast(EToastTypes.SUCCESS, 'Đã cập nhật thông tin File')
+      queryClient.invalidateQueries({ queryKey: [queryPrefix, 'all'] })
+      if (collection === 'files') {
+        queryClient.invalidateQueries({ queryKey: ['files', 'dashboard'] })
+        queryClient.invalidateQueries({
+          queryKey: ['files', 'uncompleted-count'],
+        })
+      }
+      showTypedToast(
+        EToastTypes.SUCCESS,
+        collection === 'ho-tich'
+          ? 'Đã cập nhật thông tin Hộ tịch'
+          : 'Đã cập nhật thông tin File'
+      )
     },
     onError: (error) => {
       showError(

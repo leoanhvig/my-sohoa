@@ -115,6 +115,12 @@ export async function getAllFileRecords(): Promise<FileRecord[]> {
   return snapshot.docs.map((file) => file.data() as FileRecord)
 }
 
+export async function getAllHoTichFileRecords(): Promise<FileRecord[]> {
+  const snapshot = await getDocs(collection(db, HO_TICH_FILE_COLLECTION))
+
+  return snapshot.docs.map((file) => file.data() as FileRecord)
+}
+
 export async function getAssignableFilesByUser(
   userUid: string
 ): Promise<FileRecord[]> {
@@ -316,6 +322,39 @@ export async function updateFileRecordInfo({
   })
 }
 
+export async function updateHoTichFileRecordInfo({
+  uid,
+  file_name,
+  number_of_file,
+  number_of_file_done,
+  is_completed,
+  isExported,
+  enteredByUserId,
+  creator_uid,
+  updated_uid,
+  storage_provider,
+}: UpdateFileRecordParams): Promise<void> {
+  const fileRef = doc(db, HO_TICH_FILE_COLLECTION, uid)
+  const updatePayload = Object.fromEntries(
+    Object.entries({
+      file_name,
+      number_of_file,
+      number_of_file_done,
+      is_completed,
+      isExported,
+      enteredByUserId,
+      creator_uid,
+      updated_uid,
+      storage_provider,
+    }).filter(([, value]) => value !== undefined)
+  )
+
+  await updateDoc(fileRef, {
+    ...updatePayload,
+    updated_at: serverTimestamp(),
+  })
+}
+
 export async function deleteFileRecord(fileUid: string): Promise<void> {
   const batch = writeBatch(db)
   const fileRef = doc(db, FILE_COLLECTION, fileUid)
@@ -352,6 +391,36 @@ export async function getFileRecordsByIds(
     chunks.map((chunk) =>
       getDocs(
         query(collection(db, FILE_COLLECTION), where(documentId(), 'in', chunk))
+      )
+    )
+  )
+
+  return snapshots.flatMap((snapshot) =>
+    snapshot.docs.map((file) => file.data() as FileRecord)
+  )
+}
+
+export async function getHoTichFileRecordsByIds(
+  fileUids: string[]
+): Promise<FileRecord[]> {
+  if (fileUids.length === 0) {
+    return []
+  }
+
+  const uniqueFileUids = Array.from(new Set(fileUids))
+  const chunks: string[][] = []
+
+  for (let index = 0; index < uniqueFileUids.length; index += 10) {
+    chunks.push(uniqueFileUids.slice(index, index + 10))
+  }
+
+  const snapshots = await Promise.all(
+    chunks.map((chunk) =>
+      getDocs(
+        query(
+          collection(db, HO_TICH_FILE_COLLECTION),
+          where(documentId(), 'in', chunk)
+        )
       )
     )
   )

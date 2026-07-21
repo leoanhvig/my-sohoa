@@ -31,5 +31,6 @@ service cloud.firestore {
     match /Documents/{documentId} {
       allow read, create, update, delete: if request.auth != null;
     }
+
   }
 }

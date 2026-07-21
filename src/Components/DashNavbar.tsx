@@ -30,6 +30,11 @@ export default function DashNavbar() {
       href: '/uploaded-files',
       current: window.location.pathname === '/uploaded-files',
     },
+    {
+      name: 'Hộ tịch',
+      href: '/file-hotich',
+      current: window.location.pathname === '/file-hotich',
+    },
     // { name: 'Form sức khỏe', href: '/health-form', current: false },
     // { name: 'List HealthForm', href: '/list-healthform', current: false },
   ])
@@ -39,6 +44,7 @@ export default function DashNavbar() {
       { name: 'Dashboard', href: '/' },
       { name: 'Upload', href: '/upload' },
       { name: 'File đã upload', href: '/uploaded-files' },
+      { name: 'Hộ tịch', href: '/file-hotich' },
       ...(canViewHealthForm2
         ? [
             { name: 'Health Form 2', href: '/health-form-2' },
