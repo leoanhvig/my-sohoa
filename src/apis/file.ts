@@ -51,24 +51,28 @@ export interface UpdateFileRecordParams {
 }
 
 const FILE_COLLECTION = 'Files'
+const HO_TICH_FILE_COLLECTION = 'FileHoTichs'
 const DOCUMENTS_COLLECTION = 'Documents'
 const RANDOM_CLAIM_CANDIDATE_LIMIT = 10
 
-export async function createFileRecord({
-  file_name,
-  number_of_file,
-  number_of_file_done = 0,
-  is_completed = false,
-  isExported = false,
-  enteredByUserId = '',
-  relative_path = '',
-  storage_path = '',
-  download_url = '',
-  creator_uid,
-  updated_uid,
-  storage_provider = 'firebase_storage',
-}: CreateFileRecordParams): Promise<FileRecord> {
-  const fileRef = doc(collection(db, FILE_COLLECTION))
+async function createFileRecordInCollection(
+  collectionName: string,
+  {
+    file_name,
+    number_of_file,
+    number_of_file_done = 0,
+    is_completed = false,
+    isExported = false,
+    enteredByUserId = '',
+    relative_path = '',
+    storage_path = '',
+    download_url = '',
+    creator_uid,
+    updated_uid,
+    storage_provider = 'firebase_storage',
+  }: CreateFileRecordParams
+): Promise<FileRecord> {
+  const fileRef = doc(collection(db, collectionName))
   const timestamp = serverTimestamp()
   const fileRecord: FileRecord = {
     uid: fileRef.id,
@@ -91,6 +95,18 @@ export async function createFileRecord({
   await setDoc(fileRef, fileRecord)
 
   return fileRecord
+}
+
+export async function createFileRecord(
+  params: CreateFileRecordParams
+): Promise<FileRecord> {
+  return createFileRecordInCollection(FILE_COLLECTION, params)
+}
+
+export async function createHoTichFileRecord(
+  params: CreateFileRecordParams
+): Promise<FileRecord> {
+  return createFileRecordInCollection(HO_TICH_FILE_COLLECTION, params)
 }
 
 export async function getAllFileRecords(): Promise<FileRecord[]> {

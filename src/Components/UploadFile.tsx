@@ -2,7 +2,7 @@ import { FileUp, Loader2 } from 'lucide-react'
 import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
 import { ChangeEvent, FormEvent, useState } from 'react'
 import { pdfjs } from 'react-pdf'
-import { createFileRecord } from '../apis/file'
+import { createFileRecord, createHoTichFileRecord } from '../apis/file'
 import { uploadPdfFiles } from '../apis/storage'
 import { useUserStore } from '../stores/userStore'
 import { Button } from './ui/button'
@@ -12,6 +12,7 @@ pdfjs.GlobalWorkerOptions.workerSrc = pdfWorkerUrl
 
 const MAX_PDF_FILE_SIZE_MB = 1024
 const MAX_PDF_FILE_SIZE_BYTES = MAX_PDF_FILE_SIZE_MB * 1024 * 1024
+type UploadCategory = 'vbhc' | 'ho-tich'
 
 function getPdfFileKey(file: File): string {
   return `${file.name}-${file.size}-${file.lastModified}`
@@ -27,6 +28,7 @@ async function getPdfPageCount(file: File): Promise<number> {
 
 export default function UploadFile() {
   const authUser = useUserStore((state) => state.authUser)
+  const [uploadCategory, setUploadCategory] = useState<UploadCategory>('vbhc')
   const [localFolderName, setLocalFolderName] = useState('')
   const [pdfFiles, setPdfFiles] = useState<File[]>([])
   const [pdfPageCounts, setPdfPageCounts] = useState<Record<string, number>>({})
@@ -126,6 +128,10 @@ export default function UploadFile() {
       setLocalSuccess('')
 
       const uploadedFiles = await uploadPdfFiles({ files: pdfFiles })
+      const createRecord =
+        uploadCategory === 'ho-tich'
+          ? createHoTichFileRecord
+          : createFileRecord
 
       for (const uploadedFile of uploadedFiles) {
         const originalFile = pdfFiles.find(
@@ -138,7 +144,7 @@ export default function UploadFile() {
           /\.pdf$/i,
           ''
         )
-        await createFileRecord({
+        await createRecord({
           file_name: fileNameWithoutExtension,
           number_of_file: pageCount,
           number_of_file_done: 0,
@@ -158,7 +164,9 @@ export default function UploadFile() {
       setPdfPageCounts({})
       setLocalFolderName('')
       setLocalSuccess(
-        `Đã upload ${pdfFiles.length} PDF và tạo file thành công.`
+        `Đã upload ${pdfFiles.length} PDF và tạo hồ sơ ${
+          uploadCategory === 'ho-tich' ? 'hộ tịch' : 'VBHC'
+        } thành công.`
       )
       form.reset()
     } catch (err) {
@@ -189,6 +197,62 @@ export default function UploadFile() {
           </div>
 
           <form className="mt-6 space-y-4" onSubmit={handleUploadLocalPdf}>
+            <div className="space-y-2">
+              <span className="text-sm font-semibold text-slate-700">
+                Loại hồ sơ
+              </span>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label
+                  className={`flex cursor-pointer items-start gap-3 rounded-lg border p-4 transition ${
+                    uploadCategory === 'vbhc'
+                      ? 'border-indigo-600 bg-indigo-50'
+                      : 'border-slate-200 hover:border-slate-300'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="upload-category"
+                    value="vbhc"
+                    checked={uploadCategory === 'vbhc'}
+                    onChange={() => setUploadCategory('vbhc')}
+                    className="mt-1 accent-indigo-600"
+                  />
+                  <span>
+                    <span className="block text-sm font-bold text-slate-900">
+                      Văn bản hành chính (VBHC)
+                    </span>
+                    <span className="mt-1 block text-xs text-slate-500">
+                      Lưu hồ sơ vào collection Files như luồng hiện tại.
+                    </span>
+                  </span>
+                </label>
+                <label
+                  className={`flex cursor-pointer items-start gap-3 rounded-lg border p-4 transition ${
+                    uploadCategory === 'ho-tich'
+                      ? 'border-indigo-600 bg-indigo-50'
+                      : 'border-slate-200 hover:border-slate-300'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="upload-category"
+                    value="ho-tich"
+                    checked={uploadCategory === 'ho-tich'}
+                    onChange={() => setUploadCategory('ho-tich')}
+                    className="mt-1 accent-indigo-600"
+                  />
+                  <span>
+                    <span className="block text-sm font-bold text-slate-900">
+                      Hồ tịch
+                    </span>
+                    <span className="mt-1 block text-xs text-slate-500">
+                      Lưu cùng cấu trúc dữ liệu vào collection FileHoTichs.
+                    </span>
+                  </span>
+                </label>
+              </div>
+            </div>
+
             <div className="space-y-2">
               <label
                 htmlFor="local-folder-name"

@@ -24,6 +24,10 @@ service cloud.firestore {
       allow read, create, update, delete: if request.auth != null;
     }
 
+    match /FileHoTichs/{fileId} {
+      allow read, create, update, delete: if request.auth != null;
+    }
+
     match /Documents/{documentId} {
       allow read, create, update, delete: if request.auth != null;
     }
