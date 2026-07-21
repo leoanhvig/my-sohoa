@@ -1,0 +1,19 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "DocumentsHoTich",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "uid_file",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "created_at",
+          "order": "ASCENDING"
+        }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}

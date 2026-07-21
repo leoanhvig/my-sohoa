@@ -175,7 +175,9 @@ export default function FileHoTichDetail() {
             editableFileValues && (
               <section className="rounded-xl border border-indigo-200 bg-white shadow-sm">
                 <div className="border-b border-indigo-100 bg-indigo-50 px-4 py-3">
-                  <h2 className="font-bold text-indigo-900">Thông tin Hộ tịch</h2>
+                  <h2 className="font-bold text-indigo-900">
+                    Thông tin Hộ tịch
+                  </h2>
                   <p className="mt-1 text-xs font-semibold text-indigo-700">
                     Sửa xong bấm lưu để cập nhật collection FileHoTichs.
                   </p>
@@ -209,7 +211,10 @@ export default function FileHoTichDetail() {
                         type="checkbox"
                         checked={editableFileValues.isExported}
                         onChange={(event) =>
-                          updateEditableFileValue('isExported', event.target.checked)
+                          updateEditableFileValue(
+                            'isExported',
+                            event.target.checked
+                          )
                         }
                         className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-600"
                       />
@@ -220,7 +225,9 @@ export default function FileHoTichDetail() {
                         Người nhập
                       </label>
                       <Select
-                        value={editableFileValues.enteredByUserId || 'unassigned'}
+                        value={
+                          editableFileValues.enteredByUserId || 'unassigned'
+                        }
                         onValueChange={(value) =>
                           updateEditableFileValue(
                             'enteredByUserId',
@@ -233,7 +240,9 @@ export default function FileHoTichDetail() {
                           <SelectValue placeholder="Chọn người nhập" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="unassigned">Chưa phân công</SelectItem>
+                          <SelectItem value="unassigned">
+                            Chưa phân công
+                          </SelectItem>
                           {users.map((user) => (
                             <SelectItem key={user.uid} value={user.uid}>
                               {user.user_name} ({user.email || user.uid})
